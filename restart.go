@@ -1,3 +1,6 @@
+// TO DO: Integrate Environment variables
+// TO DO: Integrate User
+
 package main
 
 import (
@@ -8,7 +11,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
-	"strings"
+
+	"application_profiling/cmdparser"
 )
 
 // logError checks for an error and logs it if present
@@ -27,35 +31,27 @@ func restartProcess(pid int) {
 	cmdline, err := os.ReadFile(cmdlinePath)
 	logError(err, "Read process cmdline")
 
-	// Convert null-separated arguments into a string
-	rawCommand := strings.ReplaceAll(string(cmdline), "\x00", " ")
-	log.Printf("[DEBUG] Raw command line: %s\n", rawCommand)
-
 	// Step 2: Get the executable path
 	exePath := fmt.Sprintf("/proc/%d/exe", pid)
 	executable, err := os.Readlink(exePath)
 	logError(err, "Read process executable path")
 	log.Printf("[DEBUG] Executable path: %s\n", executable)
 
-	// Step 3: Filter out prefix and reconstruct the command
-	if !strings.Contains(rawCommand, executable) {
-		log.Fatalf("[ERROR] Executable path not found in cmdline: %s\n", rawCommand)
-	}
-	filteredCommand := strings.SplitAfter(rawCommand, executable)[1]
-	reconstructedCommand := fmt.Sprintf("%s%s", executable, filteredCommand)
+	// Use the parser to reconstruct the command
+	reconstructedCommand := cmdparser.ParseCmdline(executable, cmdline)
 	log.Printf("[DEBUG] Reconstructed command: %s\n", reconstructedCommand)
 
-	// Step 4: Get the working directory
+	// Step 3: Get the working directory
 	cwdPath := fmt.Sprintf("/proc/%d/cwd", pid)
 	cwd, err := os.Readlink(cwdPath)
 	logError(err, "Read process working directory")
 	log.Printf("[DEBUG] Working directory: %s\n", cwd)
 
-	// Step 5: Kill the process
+	// Step 4: Kill the process
 	err = exec.Command("sudo", "kill", strconv.Itoa(pid)).Run()
 	logError(err, fmt.Sprintf("Kill process with PID %d", pid))
 
-	// Step 6: Restart the process
+	// Step 5: Restart the process
 	// Use bash to execute the command string safely
 	cmd := exec.Command("sudo", "bash", "-c", reconstructedCommand)
 	cmd.Dir = cwd // Set the working directory
