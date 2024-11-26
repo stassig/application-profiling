@@ -1,7 +1,4 @@
-// TO DO: Integrate Environment variables
-// TO DO: Integrate User
-
-package main
+package processmanager
 
 import (
 	"bytes"
@@ -9,7 +6,6 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 
 	"application_profiling/cmdparser"
@@ -24,8 +20,8 @@ func logError(err error, message string) {
 	}
 }
 
-// restartProcess handles restarting a process by PID
-func restartProcess(pid int) {
+// RestartProcess handles restarting a process by PID
+func RestartProcess(pid int) {
 	// Step 1: Extract command line arguments
 	cmdlinePath := fmt.Sprintf("/proc/%d/cmdline", pid)
 	cmdline, err := os.ReadFile(cmdlinePath)
@@ -64,19 +60,4 @@ func restartProcess(pid int) {
 	} else {
 		log.Println("[INFO] Process restarted successfully")
 	}
-}
-
-func main() {
-	// Example usage
-	if len(os.Args) < 2 {
-		log.Fatalf("[ERROR] Usage: %s <PID>\n", filepath.Base(os.Args[0]))
-	}
-
-	pid, err := strconv.Atoi(os.Args[1])
-	if err != nil {
-		log.Fatalf("[ERROR] Invalid PID: %v\n", err)
-	}
-
-	log.Printf("[INFO] Restarting process with PID: %d\n", pid)
-	restartProcess(pid)
 }
