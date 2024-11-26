@@ -1,6 +1,3 @@
-// TO DO: Integrate Environment variables
-// TO DO: Integrate User
-
 package main
 
 import (
