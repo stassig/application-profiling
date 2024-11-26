@@ -6,23 +6,23 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"application_profiling/processmanager"
+	"application_profiling/process"
 )
 
 func main() {
-	// Validate arguments
+	// Ensure the correct number of arguments are provided
 	if len(os.Args) < 2 {
-		log.Fatalf("[ERROR] Usage: %s <PID>\n", filepath.Base(os.Args[0]))
+		log.Fatalf("[ERROR] Usage: %s <ProcessID>\n", filepath.Base(os.Args[0]))
 	}
 
-	// Parse the PID from command-line arguments
-	pid, err := strconv.Atoi(os.Args[1])
+	// Parse the Process ID (PID) from the command-line arguments
+	processID, err := strconv.Atoi(os.Args[1])
 	if err != nil {
-		log.Fatalf("[ERROR] Invalid PID: %v\n", err)
+		log.Fatalf("[ERROR] Invalid Process ID (PID): %v\n", err)
 	}
 
-	log.Printf("[INFO] Restarting process with PID: %d\n", pid)
+	log.Printf("[INFO] Attempting to restart process with PID: %d\n", processID)
 
-	// Call the restart process logic
-	processmanager.RestartProcess(pid)
+	// Invoke the restart process functionality from the process manager
+	process.RestartProcess(processID)
 }
