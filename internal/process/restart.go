@@ -10,7 +10,8 @@ import (
 	"strconv"
 	"strings"
 
-	"application_profiling/cmdparser"
+	"application_profiling/internal/cmdparser"
+	"application_profiling/internal/util"
 )
 
 // RestartProcess handles restarting a process by its Process ID (PID)
@@ -38,7 +39,7 @@ func RestartProcess(processID int) {
 func getProcessExecutablePath(processID int) string {
 	executablePath := fmt.Sprintf("/proc/%d/exe", processID)
 	resolvedPath, err := os.Readlink(executablePath)
-	logError(err, "Reading process executable path")
+	util.LogError(err, "Reading process executable path")
 	return resolvedPath
 }
 
@@ -46,7 +47,7 @@ func getProcessExecutablePath(processID int) string {
 func getProcessCommandLineArgs(processID int) []byte {
 	commandLinePath := fmt.Sprintf("/proc/%d/cmdline", processID)
 	commandLineArgs, err := os.ReadFile(commandLinePath)
-	logError(err, "Reading process command-line arguments")
+	util.LogError(err, "Reading process command-line arguments")
 	return commandLineArgs
 }
 
@@ -54,7 +55,7 @@ func getProcessCommandLineArgs(processID int) []byte {
 func getProcessWorkingDirectory(processID int) string {
 	workingDirectoryPath := fmt.Sprintf("/proc/%d/cwd", processID)
 	workingDirectory, err := os.Readlink(workingDirectoryPath)
-	logError(err, "Reading process working directory")
+	util.LogError(err, "Reading process working directory")
 	return workingDirectory
 }
 
@@ -62,7 +63,7 @@ func getProcessWorkingDirectory(processID int) string {
 func getProcessEnvironmentVariables(processID int) []string {
 	environmentFilePath := fmt.Sprintf("/proc/%d/environ", processID)
 	rawEnvironmentData, err := os.ReadFile(environmentFilePath)
-	logError(err, "Reading process environment variables")
+	util.LogError(err, "Reading process environment variables")
 	return parseEnvironmentVariables(rawEnvironmentData)
 }
 
@@ -70,7 +71,7 @@ func getProcessEnvironmentVariables(processID int) []string {
 func getProcessOwnerByPID(processID int) string {
 	statusFilePath := fmt.Sprintf("/proc/%d/status", processID)
 	rawStatusData, err := os.ReadFile(statusFilePath)
-	logError(err, "Reading process status file")
+	util.LogError(err, "Reading process status file")
 
 	// Extract UID from the status file
 	var userID string
@@ -87,14 +88,14 @@ func getProcessOwnerByPID(processID int) string {
 
 	// Lookup username by UID
 	userInfo, err := user.LookupId(userID)
-	logError(err, fmt.Sprintf("Looking up user by UID (%s)", userID))
+	util.LogError(err, fmt.Sprintf("Looking up user by UID (%s)", userID))
 	return userInfo.Username
 }
 
 // terminateProcess stops the process with the given PID
 func terminateProcess(processID int) {
 	err := exec.Command("sudo", "kill", strconv.Itoa(processID)).Run()
-	logError(err, fmt.Sprintf("Terminating process with PID %d", processID))
+	util.LogError(err, fmt.Sprintf("Terminating process with PID %d", processID))
 }
 
 // startProcess starts a process with the given command, working directory, and environment variables
@@ -109,7 +110,7 @@ func startProcess(command, workingDirectory string, environmentVariables []strin
 	log.Printf("[INFO] Starting process: %s\n", command)
 	err := cmd.Run()
 
-	logError(err, fmt.Sprintf("Failed to start process: %s", stderrBuffer.String()))
+	util.LogError(err, fmt.Sprintf("Failed to start process: %s", stderrBuffer.String()))
 	log.Println("[INFO] Process started successfully")
 }
 
@@ -132,9 +133,3 @@ func parseEnvironmentVariables(rawData []byte) []string {
 	return environmentVariables
 }
 
-// logError checks for an error and logs it if present
-func logError(err error, contextMessage string) {
-	if err != nil {
-		log.Fatalf("[ERROR] %s: %v\n", contextMessage, err)
-	}
-}

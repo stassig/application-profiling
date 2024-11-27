@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"application_profiling/process"
+	"application_profiling/internal/process"
 )
 
 func main() {
