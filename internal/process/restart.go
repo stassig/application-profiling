@@ -1,3 +1,9 @@
+// TO DO: Explicitly typed variables
+// TO DO: Cleam up the code
+// TO DO: Use waitgroups to synchronize monitoring
+// TO DO: Get child processes IDs based on new process ID
+// TO DO: Filter the trace log based on the PIDs (& add the PID to the log output)
+
 package process
 
 import (
@@ -9,7 +15,6 @@ import (
 	"os/user"
 	"strconv"
 	"strings"
-	"time"
 
 	"application_profiling/internal/cmdparser"
 	"application_profiling/internal/util"
@@ -32,82 +37,35 @@ func RestartProcess(processID int) {
 	log.Printf("[DEBUG] Process owner: %s\n", processOwner)
 	log.Printf("[DEBUG] Reconstructed command: %s\n", reconstructedCommand)
 
-	// Prepare log file for bpftrace monitoring
-	logFilePath := fmt.Sprintf("file_access_log_%d.txt", processID)
+	// Restart process with monitoring
+	newPID := restartWithMonitoring(
+		processID, reconstructedCommand, workingDirectory, environmentVariables, processOwner, executablePath,
+	)
 
-	// Use a channel to synchronize
+	log.Printf("[INFO] New process started with PID: %d\n", newPID)
+}
+
+// restartWithMonitoring handles monitoring, terminating, and restarting the process
+func restartWithMonitoring( processID int, reconstructedCommand string, workingDirectory string,
+	environmentVariables []string, processOwner string, executablePath string) int {
+	// Use channels to synchronize monitoring
 	started := make(chan bool)
 	finished := make(chan bool)
 
-	go monitorFileAccess(logFilePath, started, finished)
+	// Start monitoring in a separate goroutine
+	go StartMonitoring(processID, started, finished)
 
-	// Wait until bpftrace starts
+	// Wait until monitoring starts
 	<-started
 
 	// Terminate the existing process and start a new one
 	terminateProcess(processID)
 	newPID := startProcess(reconstructedCommand, workingDirectory, environmentVariables, processOwner, executablePath)
 
-	log.Printf("[INFO] New process started with PID: %d\n", newPID)
-
-	// Wait for the bpftrace monitoring
+	// Wait for monitoring to finish
 	<-finished
-}
 
-// monitorFileAccess uses bpftrace to monitor file access events for a given PID
-func monitorFileAccess(outputFile string, started chan bool, finished chan bool) {
-	// Define the bpftrace script
-    bpftraceScript := `
-	tracepoint:syscalls:sys_enter_openat {
-		printf("%s %s\n", comm, str(args->filename));
-	}
-	`
-
-	// Redirect output to the log file
-	output, err := os.Create(outputFile)
-	util.LogError(err, "Failed to create log file")
-	defer output.Close()
-
-	// Prepare the bpftrace command
-    cmd := exec.Command("sudo", "bpftrace", "-e", bpftraceScript)
-    var stderr bytes.Buffer
-    cmd.Stdout = output
-    cmd.Stderr = &stderr
-
-	log.Println("[INFO] Starting bpftrace monitoring for file accesses.")
-
-    // Start the bpftrace process
-	err = cmd.Start()
-    util.LogError(err, "Failed to start bpftrace")
-
-	// Allow bpftrace to initialize and signal readiness
-	time.Sleep(1 * time.Second)
-    started <- true
-
-    // Monitor for a fixed duration
-    time.Sleep(5 * time.Second)
-
-    // Terminate the bpftrace process
-    log.Printf("[INFO] Stopping bpftrace monitoring\n")
-    err = cmd.Process.Kill()
-    if err != nil {
-        log.Printf("[WARNING] Failed to kill bpftrace process: %v\n", err)
-    }
-
-    // Wait for the bpftrace process to exit and capture any errors
-    err = cmd.Wait()
-    if err != nil {
-        log.Printf("[ERROR] bpftrace process exited with error: %v\n", err)
-    }
-
-    // Log any bpftrace errors
-    if stderr.Len() > 0 {
-        log.Printf("[ERROR] bpftrace error: %s\n", stderr.String())
-    } else {
-        log.Println("[INFO] bpftrace monitoring stopped successfully.")
-    }
-
-    finished <- true
+	return newPID
 }
 
 // getProcessExecutablePath retrieves the path to the executable of the process

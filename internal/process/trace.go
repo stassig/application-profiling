@@ -1,158 +1,69 @@
 package process
 
 import (
-	"bufio"
+	"bytes"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
-	"strings"
-	"sync"
 	"time"
+
+	"application_profiling/internal/util"
 )
 
-func main() {
-	if len(os.Args) != 2 {
-		fmt.Printf("Usage: %s <PID>\n", os.Args[0])
-		os.Exit(1)
+// StartMonitoring uses bpftrace to monitor file access events for a given PID
+func StartMonitoring(processID int, started chan bool, finished chan bool) {
+	defer func() { finished <- true }()
+
+	logFilePath := fmt.Sprintf("file_access_log_%d.txt", processID)
+	// Define the bpftrace script
+	bpftraceScript := `
+	tracepoint:syscalls:sys_enter_openat {
+		printf("%s %s\n", comm, str(args->filename));
 	}
+	`
 
-	oldPid := os.Args[1]
+	// Redirect output to the log file
+	output, err := os.Create(logFilePath)
+	util.LogError(err, "Failed to create log file")
+	defer output.Close()
 
-	// Get the service name from the PID
-	serviceName, err := getServiceName(oldPid)
-	if err != nil {
-		fmt.Printf("Error getting service name: %v\n", err)
-		os.Exit(1)
-	}
-	fmt.Printf("Service Name: %s\n", serviceName)
+	// Prepare the bpftrace command
+	cmd := exec.Command("sudo", "bpftrace", "-e", bpftraceScript)
+	var stderr bytes.Buffer
+	cmd.Stdout = output
+	cmd.Stderr = &stderr
 
-	// Prepare to run fatrace and restart the service
-	var wg sync.WaitGroup
-	wg.Add(1)
+	log.Println("[INFO] Starting bpftrace monitoring for file accesses.")
 
-	// Channel to capture the new PID after restart
-	pidChan := make(chan string, 1)
+	// Start the bpftrace process
+	err = cmd.Start()
+	util.LogError(err, "Failed to start bpftrace")
 
-	// Start fatrace in a goroutine
-	go func() {
-		defer wg.Done()
-		err := runFatrace(pidChan)
-		if err != nil {
-			fmt.Printf("Error running fatrace: %v\n", err)
-			os.Exit(1)
-		}
-	}()
-
-	// Give fatrace a moment to start
+	// Allow bpftrace to initialize and signal readiness
 	time.Sleep(1 * time.Second)
+	started <- true
 
-	// Restart the service and get the new PID
-	fmt.Printf("Restarting service: %s\n", serviceName)
-	newPid, err := restartServiceAndGetNewPid(serviceName)
+	// Monitor for a fixed duration
+	time.Sleep(3 * time.Second)
+
+	// Terminate the bpftrace process
+	log.Printf("[INFO] Stopping bpftrace monitoring\n")
+	err = cmd.Process.Kill()
 	if err != nil {
-		fmt.Printf("Error restarting service: %v\n", err)
-		os.Exit(1)
+		log.Printf("[WARNING] Failed to kill bpftrace process: %v\n", err)
 	}
-	fmt.Printf("New PID: %s\n", newPid)
 
-	// Send the new PID to the fatrace goroutine for filtering
-	pidChan <- newPid
-	close(pidChan)
-
-	// Wait for fatrace to finish
-	wg.Wait()
-}
-
-func getServiceName(pid string) (string, error) {
-	data, err := os.ReadFile(fmt.Sprintf("/proc/%s/cgroup", pid))
+	// Wait for the bpftrace process to exit and capture any errors
+	err = cmd.Wait()
 	if err != nil {
-		return "", err
+		log.Printf("[ERROR] bpftrace process exited with error: %v\n", err)
 	}
 
-	lines := strings.Split(string(data), "\n")
-	for _, line := range lines {
-		fields := strings.Split(line, ":")
-		if len(fields) == 3 && strings.Contains(fields[2], ".service") {
-			parts := strings.Split(fields[2], "/")
-			for _, part := range parts {
-				if strings.HasSuffix(part, ".service") {
-					return part, nil
-				}
-			}
-		}
+	// Log any bpftrace errors
+	if stderr.Len() > 0 {
+		log.Printf("[ERROR] bpftrace error: %s\n", stderr.String())
+	} else {
+		log.Println("[INFO] bpftrace monitoring stopped successfully.")
 	}
-	return "", fmt.Errorf("service not found for PID %s", pid)
-}
-
-func restartServiceAndGetNewPid(serviceName string) (string, error) {
-	// Restart the service
-	cmd := exec.Command("systemctl", "restart", serviceName)
-	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("failed to restart service: %v", err)
-	}
-
-	// Get the new PID of the service
-	output, err := exec.Command("systemctl", "show", serviceName, "-p", "MainPID", "--value").Output()
-	if err != nil {
-		return "", fmt.Errorf("failed to get new PID: %v", err)
-	}
-	newPid := strings.TrimSpace(string(output))
-	if newPid == "0" || newPid == "" {
-		return "", fmt.Errorf("could not retrieve new PID for service: %s", serviceName)
-	}
-	return newPid, nil
-}
-
-func runFatrace(pidChan chan string) error {
-    cmd := exec.Command("fatrace")
-
-    // Capture the output of fatrace
-    stdout, err := cmd.StdoutPipe()
-    if err != nil {
-        return fmt.Errorf("failed to capture stdout: %v", err)
-    }
-
-    // Open the log file for writing
-    logFile, err := os.Create("fatrace.log")
-    if err != nil {
-        return fmt.Errorf("failed to create log file: %v", err)
-    }
-    defer logFile.Close()
-
-    // Start the command
-    if err := cmd.Start(); err != nil {
-        return fmt.Errorf("failed to start fatrace: %v", err)
-    }
-
-    // Wait for the new PID from the main goroutine
-    newPid := <-pidChan
-    fmt.Printf("Filtering fatrace output for PID: %s\n", newPid)
-
-    // Prepare the format to match, e.g., "(<PID>):"
-    filter := fmt.Sprintf("(%s):", newPid)
-
-    // Read and log output line by line
-    scanner := bufio.NewScanner(stdout)
-    fmt.Println("Filtered fatrace output:")
-    for scanner.Scan() {
-        line := scanner.Text()
-
-        // Write unfiltered line to the log file
-        _, err := logFile.WriteString(line + "\n")
-        if err != nil {
-            return fmt.Errorf("failed to write to log file: %v", err)
-        }
-
-        // Print filtered lines to the console
-        if strings.Contains(line, filter) {
-            fmt.Println(line)
-        }
-    }
-
-    // Wait for the command to finish
-    if err := cmd.Wait(); err != nil {
-        return fmt.Errorf("fatrace exited with error: %v", err)
-    }
-
-    return nil
 }
