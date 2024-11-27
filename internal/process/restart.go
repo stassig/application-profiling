@@ -9,6 +9,7 @@ import (
 	"os/user"
 	"strconv"
 	"strings"
+	"time"
 
 	"application_profiling/internal/cmdparser"
 	"application_profiling/internal/util"
@@ -31,8 +32,82 @@ func RestartProcess(processID int) {
 	log.Printf("[DEBUG] Process owner: %s\n", processOwner)
 	log.Printf("[DEBUG] Reconstructed command: %s\n", reconstructedCommand)
 
+	// Prepare log file for bpftrace monitoring
+	logFilePath := fmt.Sprintf("file_access_log_%d.txt", processID)
+
+	// Use a channel to synchronize
+	started := make(chan bool)
+	finished := make(chan bool)
+
+	go monitorFileAccess(logFilePath, started, finished)
+
+	// Wait until bpftrace starts
+	<-started
+
+	// Terminate the existing process and start a new one
 	terminateProcess(processID)
-	startProcess(reconstructedCommand, workingDirectory, environmentVariables, processOwner, executablePath)
+	newPID := startProcess(reconstructedCommand, workingDirectory, environmentVariables, processOwner, executablePath)
+
+	log.Printf("[INFO] New process started with PID: %d\n", newPID)
+
+	// Wait for the bpftrace monitoring
+	<-finished
+}
+
+// monitorFileAccess uses bpftrace to monitor file access events for a given PID
+func monitorFileAccess(outputFile string, started chan bool, finished chan bool) {
+	// Define the bpftrace script
+    bpftraceScript := `
+	tracepoint:syscalls:sys_enter_openat {
+		printf("%s %s\n", comm, str(args->filename));
+	}
+	`
+
+	// Redirect output to the log file
+	output, err := os.Create(outputFile)
+	util.LogError(err, "Failed to create log file")
+	defer output.Close()
+
+	// Prepare the bpftrace command
+    cmd := exec.Command("sudo", "bpftrace", "-e", bpftraceScript)
+    var stderr bytes.Buffer
+    cmd.Stdout = output
+    cmd.Stderr = &stderr
+
+	log.Println("[INFO] Starting bpftrace monitoring for file accesses.")
+
+    // Start the bpftrace process
+	err = cmd.Start()
+    util.LogError(err, "Failed to start bpftrace")
+
+	// Allow bpftrace to initialize and signal readiness
+	time.Sleep(1 * time.Second)
+    started <- true
+
+    // Monitor for a fixed duration
+    time.Sleep(5 * time.Second)
+
+    // Terminate the bpftrace process
+    log.Printf("[INFO] Stopping bpftrace monitoring\n")
+    err = cmd.Process.Kill()
+    if err != nil {
+        log.Printf("[WARNING] Failed to kill bpftrace process: %v\n", err)
+    }
+
+    // Wait for the bpftrace process to exit and capture any errors
+    err = cmd.Wait()
+    if err != nil {
+        log.Printf("[ERROR] bpftrace process exited with error: %v\n", err)
+    }
+
+    // Log any bpftrace errors
+    if stderr.Len() > 0 {
+        log.Printf("[ERROR] bpftrace error: %s\n", stderr.String())
+    } else {
+        log.Println("[INFO] bpftrace monitoring stopped successfully.")
+    }
+
+    finished <- true
 }
 
 // getProcessExecutablePath retrieves the path to the executable of the process
@@ -99,7 +174,7 @@ func terminateProcess(processID int) {
 }
 
 // startProcess starts a process with the given command, working directory, environment variables and user
-func startProcess(command, workingDirectory string, environmentVariables []string, user string, executablePath string) {
+func startProcess(command, workingDirectory string, environmentVariables []string, user string, executablePath string) int {
 	cmd := exec.Command("sudo", "-u", user, "bash", "-c", command)
 	cmd.Dir = workingDirectory
 	cmd.Env = environmentVariables
@@ -113,12 +188,14 @@ func startProcess(command, workingDirectory string, environmentVariables []strin
 	util.LogError(err, fmt.Sprintf("Failed to start process: %s", stderrBuffer.String()))
 	log.Println("[INFO] Process started successfully")
 
-	newPID := getProcessIDbyExecutable(executablePath)
+	newPID := GetProcessIDbyExecutable(executablePath)
 	log.Printf("[INFO] New PID: %d\n", newPID)
+
+	return newPID
 }
 
 // getProcessIDbyExecutable retrieves the PID of a process by its executable path
-func getProcessIDbyExecutable(executablePath string) int {
+func GetProcessIDbyExecutable(executablePath string) int {
 	output, err := exec.Command("pgrep", "-f", executablePath).Output()
 	util.LogError(err, "Failed to retrieve PID for executable: "+executablePath)
 
