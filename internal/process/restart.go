@@ -21,18 +21,18 @@ func RestartProcess(processID int) {
 	workingDirectory := getProcessWorkingDirectory(processID)
 	environmentVariables := getProcessEnvironmentVariables(processID)
 	processOwner := getProcessOwnerByPID(processID)
+	// Parse the command-line string into a valid command
+	reconstructedCommand := cmdparser.ParseCommandLine(executablePath, commandLineArgs)
 
 	log.Printf("[DEBUG] Executable path: %s\n", executablePath)
 	log.Printf("[DEBUG] Command-line arguments: %s\n", commandLineArgs)
 	log.Printf("[DEBUG] Working directory: %s\n", workingDirectory)
 	log.Printf("[DEBUG] Environment variables: %v\n", environmentVariables)
 	log.Printf("[DEBUG] Process owner: %s\n", processOwner)
-
-	reconstructedCommand := cmdparser.ParseCommandLine(executablePath, commandLineArgs)
 	log.Printf("[DEBUG] Reconstructed command: %s\n", reconstructedCommand)
 
 	terminateProcess(processID)
-	startProcess(reconstructedCommand, workingDirectory, environmentVariables, processOwner)
+	startProcess(reconstructedCommand, workingDirectory, environmentVariables, processOwner, executablePath)
 }
 
 // getProcessExecutablePath retrieves the path to the executable of the process
@@ -99,7 +99,7 @@ func terminateProcess(processID int) {
 }
 
 // startProcess starts a process with the given command, working directory, environment variables and user
-func startProcess(command, workingDirectory string, environmentVariables []string, user string) {
+func startProcess(command, workingDirectory string, environmentVariables []string, user string, executablePath string) {
 	cmd := exec.Command("sudo", "-u", user, "bash", "-c", command)
 	cmd.Dir = workingDirectory
 	cmd.Env = environmentVariables
@@ -112,6 +112,20 @@ func startProcess(command, workingDirectory string, environmentVariables []strin
 
 	util.LogError(err, fmt.Sprintf("Failed to start process: %s", stderrBuffer.String()))
 	log.Println("[INFO] Process started successfully")
+
+	newPID := getProcessIDbyExecutable(executablePath)
+	log.Printf("[INFO] New PID: %d\n", newPID)
+}
+
+// getProcessIDbyExecutable retrieves the PID of a process by its executable path
+func getProcessIDbyExecutable(executablePath string) int {
+	output, err := exec.Command("pgrep", "-f", executablePath).Output()
+	util.LogError(err, "Failed to retrieve PID for executable: "+executablePath)
+
+	pid, err := strconv.Atoi(strings.TrimSpace(string(output)))
+	util.LogError(err, "Failed to convert PID to integer for executable: "+executablePath)
+
+	return pid
 }
 
 // parseEnvironmentVariables parses environment variables from a null-byte separated string
