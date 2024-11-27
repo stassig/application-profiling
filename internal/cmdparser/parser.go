@@ -1,7 +1,4 @@
 // TO DO: Refactor extractFlagsAndArguments
-// TO DO: Re-organize the folder structure
-// TO DO: Move logging to util package
-// TO DO: Integrate process user in the command line
 
 package cmdparser
 

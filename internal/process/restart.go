@@ -32,7 +32,7 @@ func RestartProcess(processID int) {
 	log.Printf("[DEBUG] Reconstructed command: %s\n", reconstructedCommand)
 
 	terminateProcess(processID)
-	startProcess(reconstructedCommand, workingDirectory, environmentVariables)
+	startProcess(reconstructedCommand, workingDirectory, environmentVariables, processOwner)
 }
 
 // getProcessExecutablePath retrieves the path to the executable of the process
@@ -98,16 +98,16 @@ func terminateProcess(processID int) {
 	util.LogError(err, fmt.Sprintf("Terminating process with PID %d", processID))
 }
 
-// startProcess starts a process with the given command, working directory, and environment variables
-func startProcess(command, workingDirectory string, environmentVariables []string) {
-	cmd := exec.Command("sudo", "bash", "-c", command)
+// startProcess starts a process with the given command, working directory, environment variables and user
+func startProcess(command, workingDirectory string, environmentVariables []string, user string) {
+	cmd := exec.Command("sudo", "-u", user, "bash", "-c", command)
 	cmd.Dir = workingDirectory
 	cmd.Env = environmentVariables
 
 	var stderrBuffer bytes.Buffer
 	cmd.Stderr = &stderrBuffer
 
-	log.Printf("[INFO] Starting process: %s\n", command)
+	log.Printf("[INFO] Starting process as user %s: %s\n", user, command)
 	err := cmd.Run()
 
 	util.LogError(err, fmt.Sprintf("Failed to start process: %s", stderrBuffer.String()))
