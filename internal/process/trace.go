@@ -68,48 +68,53 @@ func StartBpftrace(processID int, started chan bool, finished chan bool) {
 }
 
 // StartFatrace uses fatrace to monitor file access events and filter by a process name (e.g., nginx)
-func StartFatrace(processID int, started chan bool, finished chan bool) {
+func StartFatrace(logFilePath string, started chan bool, finished chan bool) {
 	defer func() { finished <- true }()
 
-	logFilePath := fmt.Sprintf("file_access_log_fatrace_%d.log", processID)
-
-	// Redirect output to the log file
+	// Open the log file for writing
 	output, err := os.Create(logFilePath)
-	logger.Error(err, "Failed to create log file for fatrace")
+	if err != nil {
+		logger.Error(err, "Failed to create log file for fatrace")
+		started <- false
+		return
+	}
 	defer output.Close()
 
-	// Prepare a single pipeline command: fatrace | grep "nginx"
-	cmd := exec.Command("sh", "-c", "sudo fatrace | grep nginx")
-
-	// Redirect the pipeline output to the log file
-	cmd.Stdout = output
-	cmd.Stderr = os.Stderr // Optional: to capture any errors directly to stderr
+	// Prepare the fatrace command
+	cmd := exec.Command("sudo", "fatrace")
+	cmd.Stdout = output   // Directly write fatrace output to the log file
+	cmd.Stderr = os.Stderr // Optional: log errors directly to stderr
 
 	logger.Info("Starting fatrace monitoring for file accesses.")
 
-	// Start the pipeline process
+	// Start the fatrace process
 	err = cmd.Start()
-	logger.Error(err, "Failed to start fatrace pipeline")
+	if err != nil {
+		logger.Error(err, "Failed to start fatrace")
+		started <- false
+		return
+	}
 
-	// Allow the pipeline to initialize and signal readiness
 	time.Sleep(1 * time.Second)
+
+	// Signal that monitoring has started
 	started <- true
 
 	// Monitor for a fixed duration
-	time.Sleep(5 * time.Second)
+	time.Sleep(4 * time.Second)
 
-	// Terminate the pipeline
+	// Stop monitoring
 	logger.Info("Stopping fatrace monitoring.")
 	err = cmd.Process.Kill()
 	if err != nil {
 		logger.Warning(fmt.Sprintf("Failed to kill fatrace process: %v", err))
 	}
 
-	// Wait for the pipeline to exit and capture any errors
+	// Ensure the process has exited
 	err = cmd.Wait()
 	if err != nil {
-		logger.Warning(fmt.Sprintf("fatrace pipeline exited with error: %v", err))
+		logger.Warning(fmt.Sprintf("fatrace process exited with error: %v", err))
 	}
 
-	logger.Info("fatrace monitoring stopped successfully.")
+	logger.Info(fmt.Sprintf("fatrace log saved to: %s", logFilePath))
 }

@@ -1,8 +1,6 @@
-// TO DO: Explicitly typed variables
 // TO DO: Clean up the code (use struct for process info)
-// TO DO: Filter the trace log based on the PIDs
 // TO DO: Use waitgroups to synchronize monitoring
-// TO DO: Ensure bpftrace has started without sleep
+// TO DO: Ensure bpftrace starts without explicit sleep
 
 package process
 
@@ -31,25 +29,21 @@ func RestartProcess(processID int) {
 	logProcessDetails(processID, executablePath, commandLineArgs, workingDirectory, environmentVariables, processOwner, reconstructedCommand)
 
 	// Restart process with monitoring
-	newPID := restartWithMonitoring(
+	restartWithMonitoring(
 		processID, reconstructedCommand, workingDirectory, environmentVariables, processOwner, executablePath,
 	)
-
-	log.Printf("[INFO] New process started with PID: %d\n", newPID)
-
- 	childProcesses := GetChildProcessIDs(newPID)
-	log.Printf("[INFO] Child processes: %v\n", childProcesses)
 }
 
 // restartWithMonitoring handles monitoring, terminating, and restarting the process
 func restartWithMonitoring( processID int, reconstructedCommand string, workingDirectory string,
-	environmentVariables []string, processOwner string, executablePath string) int {
+	environmentVariables []string, processOwner string, executablePath string) {
 	// Use channels to synchronize monitoring
 	started := make(chan bool)
 	finished := make(chan bool)
+	logFilePath := fmt.Sprintf("file_access_log_fatrace_%d.log", processID)
 
 	// Start monitoring in a separate goroutine
-	go StartFatrace(processID, started, finished)
+	go StartFatrace(logFilePath, started, finished)
 
 	// Wait until monitoring starts
 	<-started
@@ -57,11 +51,19 @@ func restartWithMonitoring( processID int, reconstructedCommand string, workingD
 	// Terminate the existing process and start a new one
 	terminateProcess(processID)
 	newPID := startProcess(reconstructedCommand, workingDirectory, environmentVariables, processOwner, executablePath)
+	childProcesses := GetChildProcessIDs(newPID)
+	bootStrapPID := newPID - 1 // Init process that exits after process setup
 
 	// Wait for monitoring to finish
 	<-finished
 
-	return newPID
+	log.Printf("[INFO] New process started with PID: %d\n", newPID)
+	log.Printf("[INFO] Child processes: %v\n", childProcesses)
+
+	// Add the new process and its children to the list of monitored PIDs
+	monitoredPIDs := append([]int{newPID, bootStrapPID}, childProcesses...)
+	// Filter the log file for monitored PIDs
+	FilterFatraceLog(logFilePath, monitoredPIDs)
 }
 
 // terminateProcess stops the process with the given PID
