@@ -66,8 +66,29 @@ func GetProcessOwner(processID int) string {
 	return userInfo.Username
 }
 
-// getProcessIDbyExecutable retrieves the PID of a process by its executable path
+// GetChildProcessIDs retrieves a list of child process IDs for a given parent process ID
+func GetChildProcessIDs(parentPID int) []int {
+	// Execute pgrep -P <parentPID>
+	output, err := exec.Command("pgrep", "-P", strconv.Itoa(parentPID)).Output()
+	logger.Error(err, "Failed to retrieve child process IDs for parent PID: "+strconv.Itoa(parentPID))
+
+	// Split the output into lines and parse each line into an integer
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	var childProcessIDs []int
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		pid, err := strconv.Atoi(line)
+		logger.Error(err, "Failed to convert PID to integer: "+line)
+		childProcessIDs = append(childProcessIDs, pid)
+	}
+	return childProcessIDs
+}
+
+// GetProcessIDbyExecutable retrieves the PID of a process by its executable path
 func GetProcessIDbyExecutable(executablePath string) int {
+	// Execute pgrep -f <executablePath>
 	output, err := exec.Command("pgrep", "-f", executablePath).Output()
 	logger.Error(err, "Failed to retrieve PID for executable: "+executablePath)
 
