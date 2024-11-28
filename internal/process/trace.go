@@ -3,7 +3,6 @@ package process
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"time"
@@ -11,21 +10,21 @@ import (
 	"application_profiling/internal/util/logger"
 )
 
-// StartMonitoring uses bpftrace to monitor file access events for a given PID
-func StartMonitoring(processID int, started chan bool, finished chan bool) {
+// StartBpftrace uses bpftrace to monitor file access events for a given PID
+func StartBpftrace(processID int, started chan bool, finished chan bool) {
 	defer func() { finished <- true }()
 
-	logFilePath := fmt.Sprintf("file_access_log_%d.txt", processID)
+	logFilePath := fmt.Sprintf("file_access_log_bpftrace_%d.log", processID)
 	// Define the bpftrace script
 	bpftraceScript := `
 	tracepoint:syscalls:sys_enter_openat {
-		printf("%s %s\n", comm, str(args->filename));
+		printf("%d %s %s\n", tid, comm, str(args->filename));
 	}
 	`
 
 	// Redirect output to the log file
 	output, err := os.Create(logFilePath)
-	logger.Error(err, "Failed to create log file")
+	logger.Error(err, "Failed to create log file for bpftrace")
 	defer output.Close()
 
 	// Prepare the bpftrace command
@@ -34,7 +33,7 @@ func StartMonitoring(processID int, started chan bool, finished chan bool) {
 	cmd.Stdout = output
 	cmd.Stderr = &stderr
 
-	log.Println("[INFO] Starting bpftrace monitoring for file accesses.")
+	logger.Info("Starting bpftrace monitoring for file accesses.")
 
 	// Start the bpftrace process
 	err = cmd.Start()
@@ -48,22 +47,69 @@ func StartMonitoring(processID int, started chan bool, finished chan bool) {
 	time.Sleep(3 * time.Second)
 
 	// Terminate the bpftrace process
-	log.Printf("[INFO] Stopping bpftrace monitoring\n")
+	logger.Info("Stopping bpftrace monitoring.")
 	err = cmd.Process.Kill()
 	if err != nil {
-		log.Printf("[WARNING] Failed to kill bpftrace process: %v\n", err)
+		logger.Warning(fmt.Sprintf("Failed to kill bpftrace process: %v", err))
 	}
 
 	// Wait for the bpftrace process to exit and capture any errors
 	err = cmd.Wait()
 	if err != nil {
-		log.Printf("[ERROR] bpftrace process exited with error: %v\n", err)
+		logger.Warning(fmt.Sprintf("bpftrace process exited with error: %v", err))
 	}
 
 	// Log any bpftrace errors
 	if stderr.Len() > 0 {
-		log.Printf("[ERROR] bpftrace error: %s\n", stderr.String())
+		logger.Error(fmt.Errorf(stderr.String()), "bpftrace error")
 	} else {
-		log.Println("[INFO] bpftrace monitoring stopped successfully.")
+		logger.Info("bpftrace monitoring stopped successfully.")
 	}
+}
+
+// StartFatrace uses fatrace to monitor file access events and filter by a process name (e.g., nginx)
+func StartFatrace(processID int, started chan bool, finished chan bool) {
+	defer func() { finished <- true }()
+
+	logFilePath := fmt.Sprintf("file_access_log_fatrace_%d.log", processID)
+
+	// Redirect output to the log file
+	output, err := os.Create(logFilePath)
+	logger.Error(err, "Failed to create log file for fatrace")
+	defer output.Close()
+
+	// Prepare a single pipeline command: fatrace | grep "nginx"
+	cmd := exec.Command("sh", "-c", "sudo fatrace | grep nginx")
+
+	// Redirect the pipeline output to the log file
+	cmd.Stdout = output
+	cmd.Stderr = os.Stderr // Optional: to capture any errors directly to stderr
+
+	logger.Info("Starting fatrace monitoring for file accesses.")
+
+	// Start the pipeline process
+	err = cmd.Start()
+	logger.Error(err, "Failed to start fatrace pipeline")
+
+	// Allow the pipeline to initialize and signal readiness
+	time.Sleep(1 * time.Second)
+	started <- true
+
+	// Monitor for a fixed duration
+	time.Sleep(5 * time.Second)
+
+	// Terminate the pipeline
+	logger.Info("Stopping fatrace monitoring.")
+	err = cmd.Process.Kill()
+	if err != nil {
+		logger.Warning(fmt.Sprintf("Failed to kill fatrace process: %v", err))
+	}
+
+	// Wait for the pipeline to exit and capture any errors
+	err = cmd.Wait()
+	if err != nil {
+		logger.Warning(fmt.Sprintf("fatrace pipeline exited with error: %v", err))
+	}
+
+	logger.Info("fatrace monitoring stopped successfully.")
 }

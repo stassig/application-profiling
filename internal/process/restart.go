@@ -1,24 +1,8 @@
 // TO DO: Explicitly typed variables
-// TO DO: Clean up the code (move proccess info to a struct and separate file)
+// TO DO: Clean up the code (use struct for process info)
+// TO DO: Filter the trace log based on the PIDs
 // TO DO: Use waitgroups to synchronize monitoring
-// TO DO: Get child processes IDs based on new process ID
-// TO DO: Filter the trace log based on the PIDs (& add the PID to the log output)
 // TO DO: Ensure bpftrace has started without sleep
-
-// PHASE 1: Dependency Gathering
-
-// Step 1: Get process information (executable path, command-line arguments, working directory, environment variables, process owner, sockets, user permissions, etc.)
-// Step 2: Save process information to a file
-// Step 3: Restart the process
-// Step 4: Get new PID and child processes
-// Step 5: Monitor the new process and log file access
-// Step 6: Filter the trace log based on the PIDs & clean up duplicate logs
-
-// PHASE 2: Dockerization
-
-// Step 1: Copy files from trace log to "profiling" directory (ensure working symlinks)
-// Step 2: Map the "profiling" directory to the Dockerfile
-// Step 3: Map process info file to the Dockerfile
 
 package process
 
@@ -52,6 +36,9 @@ func RestartProcess(processID int) {
 	)
 
 	log.Printf("[INFO] New process started with PID: %d\n", newPID)
+
+ 	childProcesses := GetChildProcessIDs(newPID)
+	log.Printf("[INFO] Child processes: %v\n", childProcesses)
 }
 
 // restartWithMonitoring handles monitoring, terminating, and restarting the process
@@ -62,7 +49,7 @@ func restartWithMonitoring( processID int, reconstructedCommand string, workingD
 	finished := make(chan bool)
 
 	// Start monitoring in a separate goroutine
-	go StartMonitoring(processID, started, finished)
+	go StartFatrace(processID, started, finished)
 
 	// Wait until monitoring starts
 	<-started
@@ -97,6 +84,7 @@ func startProcess(command, workingDirectory string, environmentVariables []strin
 
 	logger.Error(err, fmt.Sprintf("Failed to start process: %s", stderrBuffer.String()))
 	log.Println("[INFO] Process started successfully")
+	log.Printf("[INFO] Init PID: %d\n", cmd.Process.Pid)
 
 	newPID := GetProcessIDbyExecutable(executablePath)
 	log.Printf("[INFO] New PID: %d\n", newPID)
