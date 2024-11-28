@@ -1,6 +1,7 @@
-// TO DO: Clean up the code (use struct for process info)
+// TO DO: Clean up: struct for process info; interfacing
 // TO DO: Use waitgroups to synchronize monitoring
 // TO DO: Ensure bpftrace starts without explicit sleep
+// TO DO: Make sure fatrace exits
 
 package process
 
