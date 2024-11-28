@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"time"
 
-	"application_profiling/internal/util"
+	"application_profiling/internal/util/logger"
 )
 
 // StartMonitoring uses bpftrace to monitor file access events for a given PID
@@ -25,7 +25,7 @@ func StartMonitoring(processID int, started chan bool, finished chan bool) {
 
 	// Redirect output to the log file
 	output, err := os.Create(logFilePath)
-	util.LogError(err, "Failed to create log file")
+	logger.Error(err, "Failed to create log file")
 	defer output.Close()
 
 	// Prepare the bpftrace command
@@ -38,7 +38,7 @@ func StartMonitoring(processID int, started chan bool, finished chan bool) {
 
 	// Start the bpftrace process
 	err = cmd.Start()
-	util.LogError(err, "Failed to start bpftrace")
+	logger.Error(err, "Failed to start bpftrace")
 
 	// Allow bpftrace to initialize and signal readiness
 	time.Sleep(1 * time.Second)
