@@ -11,10 +11,9 @@ import (
 )
 
 // StartBpftrace uses bpftrace to monitor file access events for a given PID
-func StartBpftrace(processID int, started chan bool, finished chan bool) {
+func StartBpftrace(logFilePath string, started chan bool, finished chan bool) {
 	defer func() { finished <- true }()
 
-	logFilePath := fmt.Sprintf("file_access_log_bpftrace_%d.log", processID)
 	// Define the bpftrace script
 	bpftraceScript := `
 	tracepoint:syscalls:sys_enter_openat {
