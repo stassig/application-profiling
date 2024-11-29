@@ -1,9 +1,3 @@
-// TO DO: Integrate socket files (mkdir -p /var/run/mysqld/) & user permissions (test mysql)
-// TO DO: Filter strace output for file-paths
-// TO DO: Add more params to strace (e.g., mmap)
-// TO DO: Integrate /etc/os-release info for accurate base image
-// TO DO: Clean up: struct for process info; interfacing
-
 package process
 
 import (
@@ -12,7 +6,6 @@ import (
 	"log"
 	"os/exec"
 	"strconv"
-	"time"
 
 	"application_profiling/internal/cmdparser"
 	"application_profiling/internal/util/logger"
@@ -33,16 +26,40 @@ func RestartProcess(processID int) {
 
 	// Restart process with monitoring
 	restartWithMonitoring(
-		processID, reconstructedCommand, workingDirectory, environmentVariables, processOwner,
+		processID, reconstructedCommand, workingDirectory, environmentVariables, processOwner, executablePath,
 	)
 }
 
 // restartWithMonitoring handles monitoring, terminating, and restarting the process
 func restartWithMonitoring( processID int, reconstructedCommand string, workingDirectory string,
-	environmentVariables []string, processOwner string) {
+	environmentVariables []string, processOwner string, executablePath string) {
+	// Use channels to synchronize monitoring
+	started := make(chan bool)
+	finished := make(chan bool)
+	logFilePath := fmt.Sprintf("file_access_log_fatrace_%d.log", processID)
+
+	// Start monitoring in a separate goroutine
+	go StartFatrace(logFilePath, started, finished)
+
+	// Wait until monitoring starts
+	<-started
+
 	// Terminate the existing process and start a new one
 	terminateProcess(processID)
-	startProcessWithStrace(processID, reconstructedCommand, workingDirectory, environmentVariables, processOwner)
+	newPID := startProcess(reconstructedCommand, workingDirectory, environmentVariables, processOwner, executablePath)
+	childProcesses := GetChildProcessIDs(newPID)
+	bootStrapPID := newPID - 1 // Init process that exits after process setup
+
+	// Wait for monitoring to finish
+	<-finished
+
+	log.Printf("[INFO] New process started with PID: %d\n", newPID)
+	log.Printf("[INFO] Child processes: %v\n", childProcesses)
+
+	// Add the new process and its children to the list of monitored PIDs
+	monitoredPIDs := append([]int{newPID, bootStrapPID}, childProcesses...)
+	// Filter the log file for monitored PIDs
+	FilterFatraceLog(logFilePath, monitoredPIDs)
 }
 
 // terminateProcess stops the process with the given PID
@@ -51,32 +68,27 @@ func terminateProcess(processID int) {
 	logger.Error(err, fmt.Sprintf("Terminating process with PID %d", processID))
 }
 
-// startProcessWithStrace starts a process with `strace` monitoring
-func startProcessWithStrace(processID int, command, workingDirectory string, environmentVariables []string, user string)  {
-	// Hardcoded path for strace output log file (for now)
-	logfilePath := fmt.Sprintf("/home/stassig/go/application-profiling/strace_log_%d.log", processID)
-    // Prepare the strace command
-    cmd := exec.Command("sudo", "-u", user, "strace", "-f", "-e", "trace=open,openat", "-o", logfilePath, "bash", "-c", command)
-    cmd.Dir = workingDirectory
-    cmd.Env = environmentVariables
-    var stderrBuffer bytes.Buffer
-    cmd.Stderr = &stderrBuffer
+// startProcess starts a process with the given command, working directory, environment variables and user
+func startProcess(command, workingDirectory string, environmentVariables []string, user string, executablePath string) int {
+	cmd := exec.Command("sudo", "-u", user, "bash", "-c", command)
+	cmd.Dir = workingDirectory
+	cmd.Env = environmentVariables
 
-    log.Printf("[INFO] Starting process as user %s with strace: %s\n", user, command)
-    err := cmd.Start()
-    logger.Error(err, fmt.Sprintf("Failed to start process: %s", stderrBuffer.String()))
+	var stderrBuffer bytes.Buffer
+	cmd.Stderr = &stderrBuffer
 
-    // Sleep for 5 seconds to allow strace to gather data
-    time.Sleep(5 * time.Second)
+	log.Printf("[INFO] Starting process as user %s: %s\n", user, command)
+	err := cmd.Run()
 
-    log.Println("[INFO] Process started successfully")
-    log.Printf("[INFO] strace PID: %d\n", cmd.Process.Pid)
+	logger.Error(err, fmt.Sprintf("Failed to start process: %s", stderrBuffer.String()))
+	log.Println("[INFO] Process started successfully")
+	log.Printf("[INFO] Init PID: %d\n", cmd.Process.Pid)
 
-    // Terminate the strace process after data collection
-    err = cmd.Process.Kill()
-	logger.Warning(fmt.Sprintf("Failed to kill strace process: %v", err))
+	newPID := GetProcessIDbyExecutable(executablePath)
+	log.Printf("[INFO] New PID: %d\n", newPID)
+
+	return newPID
 }
-
 
 // logProcessDetails logs key details about a process in one method.
 func logProcessDetails(processID int, executablePath string, commandLineArgs []byte, workingDirectory string, 
