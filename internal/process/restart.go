@@ -24,11 +24,12 @@ func RestartProcess(processID int) {
 	workingDirectory := GetWorkingDirectory(processID)
 	environmentVariables := GetEnvironmentVariables(processID)
 	processOwner := GetProcessOwner(processID)
+	sockets := GetSockets(processID)
 	// Parse the command-line string into a valid command
 	reconstructedCommand := cmdparser.ParseCommandLine(executablePath, commandLineArgs)
 
 	// Log debug information
-	logProcessDetails(processID, executablePath, commandLineArgs, workingDirectory, environmentVariables, processOwner, reconstructedCommand)
+	logProcessDetails(processID, executablePath, commandLineArgs, workingDirectory, environmentVariables, processOwner, reconstructedCommand, sockets)
 
 	// Restart process with monitoring
 	terminateProcess(processID)
@@ -72,8 +73,7 @@ func startProcessWithStrace(processID int, command, workingDirectory string, env
 }
 
 // logProcessDetails logs key details about a process in one method.
-func logProcessDetails(processID int, executablePath string, commandLineArgs []byte, workingDirectory string, 
-	environmentVariables []string, processOwner, reconstructedCommand string) {
+func logProcessDetails(processID int, executablePath string, commandLineArgs []byte, workingDirectory string, environmentVariables []string, processOwner, reconstructedCommand string, sockets []string) {
 	log.Printf("[DEBUG] Process ID: %d", processID)
 	log.Printf("[DEBUG] Executable path: %s", executablePath)
 	log.Printf("[DEBUG] Command-line arguments: %s", commandLineArgs)
@@ -81,4 +81,5 @@ func logProcessDetails(processID int, executablePath string, commandLineArgs []b
 	log.Printf("[DEBUG] Environment variables: %v", environmentVariables)
 	log.Printf("[DEBUG] Process owner: %s", processOwner)
 	log.Printf("[DEBUG] Reconstructed command: %s", reconstructedCommand)
+	log.Printf("[DEBUG] Sockets: %v", sockets)
 }

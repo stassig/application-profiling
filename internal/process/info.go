@@ -70,7 +70,10 @@ func GetProcessOwner(processID int) string {
 func GetChildProcessIDs(parentPID int) []int {
 	// Execute pgrep -P <parentPID>
 	output, err := exec.Command("pgrep", "-P", strconv.Itoa(parentPID)).Output()
-	logger.Error(err, "Failed to retrieve child process IDs for parent PID: "+strconv.Itoa(parentPID))
+	if err != nil {
+		logger.Warning("No child processes found or failed to retrieve child processes for parent PID: " + strconv.Itoa(parentPID))
+		return []int{} // Return an empty slice if there are no child processes
+	}
 
 	// Split the output into lines and parse each line into an integer
 	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
