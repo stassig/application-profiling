@@ -1,5 +1,4 @@
 // TO DO: Integrate socket files (mkdir -p /var/run/mysqld/) & user permissions (test mysql)
-// TO DO: Filter strace output for file-paths
 // TO DO: Add more params to strace (e.g., mmap)
 // TO DO: Integrate /etc/os-release info for accurate base image
 // TO DO: Clean up: struct for process info; interfacing
@@ -32,15 +31,6 @@ func RestartProcess(processID int) {
 	logProcessDetails(processID, executablePath, commandLineArgs, workingDirectory, environmentVariables, processOwner, reconstructedCommand)
 
 	// Restart process with monitoring
-	restartWithMonitoring(
-		processID, reconstructedCommand, workingDirectory, environmentVariables, processOwner,
-	)
-}
-
-// restartWithMonitoring handles monitoring, terminating, and restarting the process
-func restartWithMonitoring( processID int, reconstructedCommand string, workingDirectory string,
-	environmentVariables []string, processOwner string) {
-	// Terminate the existing process and start a new one
 	terminateProcess(processID)
 	startProcessWithStrace(processID, reconstructedCommand, workingDirectory, environmentVariables, processOwner)
 }
@@ -55,6 +45,7 @@ func terminateProcess(processID int) {
 func startProcessWithStrace(processID int, command, workingDirectory string, environmentVariables []string, user string)  {
 	// Hardcoded path for strace output log file (for now)
 	logfilePath := fmt.Sprintf("/home/stassig/go/application-profiling/strace_log_%d.log", processID)
+	filteredLogfilePath := fmt.Sprintf("/home/stassig/go/application-profiling/filtered_strace_log_%d.log", processID)
     // Prepare the strace command
     cmd := exec.Command("sudo", "-u", user, "strace", "-f", "-e", "trace=open,openat", "-o", logfilePath, "bash", "-c", command)
     cmd.Dir = workingDirectory
@@ -75,8 +66,10 @@ func startProcessWithStrace(processID int, command, workingDirectory string, env
     // Terminate the strace process after data collection
     err = cmd.Process.Kill()
 	logger.Warning(fmt.Sprintf("Failed to kill strace process: %v", err))
-}
 
+	// Filter the strace log file to remove duplicates and invalid paths
+	FilterStraceLog(logfilePath, filteredLogfilePath)
+}
 
 // logProcessDetails logs key details about a process in one method.
 func logProcessDetails(processID int, executablePath string, commandLineArgs []byte, workingDirectory string, 
