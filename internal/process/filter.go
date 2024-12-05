@@ -3,7 +3,6 @@ package process
 import (
 	"application_profiling/internal/util/logger"
 	"bufio"
-	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -11,11 +10,6 @@ import (
 )
 
 var (
-	genericPaths = []string{
-		"/", "/bin", "/sbin", "/lib", "/lib64", "/usr", "/etc", "/dev", "/proc", "/sys",
-		"/run", "/var", "/tmp", "/home", "/root", "/opt", "/mnt", "/media", "/srv", "/boot",
-	}
-
 	excludePrefixes = []string{
 		"/dev/", "/proc/", "/sys/", "/run/", "/tmp/", "/usr/lib/locale/", "/usr/share/locale/",
 	}
@@ -51,42 +45,31 @@ func processStraceLog(inputFile *os.File, outputFile *os.File, filePathRegex *re
 	for scanner.Scan() {
 		line := scanner.Text()
 
-		// Check for chdir syscall to update the working directory
-		if strings.Contains(line, "chdir(") {
-			// Extract new working directory
-			dirRegex := regexp.MustCompile(`chdir\("([^"]+)"\)`)
-			matches := dirRegex.FindStringSubmatch(line)
-			if matches != nil && len(matches) > 1 {
-				currentWorkingDirectory = matches[1]
-			}
-			continue
-		}
+		// Update working directory if "chdir" syscall is encountered
+		currentWorkingDirectory = updateWorkingDirectory(line, currentWorkingDirectory)
 
 		// Extract file paths from the line
-		matches := filePathRegex.FindAllStringSubmatch(line, -1)
-		if matches == nil {
+		match := filePathRegex.FindStringSubmatch(line)
+		if match == nil {
 			continue
 		}
 
-		for _, match := range matches {
-			filePath := match[1]
+		filePath := match[1]
 
-			// Resolve relative paths (e.g., "./file")
-			if strings.HasPrefix(filePath, "./") {
-				filePath = filepath.Join(currentWorkingDirectory, filePath[2:])
-				log.Println(filePath)
-			}
+		// Resolve relative paths (e.g., "./file")
+		if strings.HasPrefix(filePath, "./") {
+			filePath = filepath.Join(currentWorkingDirectory, filePath[2:])
+		}
 
-			// Skip duplicates and invalid paths
-			if seenPaths[filePath] || isGenericPath(filePath) || hasExcludedPrefix(filePath) {
-				continue
-			}
+		// Skip duplicates and invalid paths
+		if seenPaths[filePath] || isShortGenericPath(filePath) || hasExcludedPrefix(filePath) {
+			continue
+		}
 
-			// Add to seen paths and write to output file
-			seenPaths[filePath] = true
-			if _, err := outputFile.WriteString(filePath + "\n"); err != nil {
-				return err
-			}
+		// Add to seen paths and write to output file
+		seenPaths[filePath] = true
+		if _, err := outputFile.WriteString(filePath + "\n"); err != nil {
+			return err
 		}
 	}
 
@@ -98,14 +81,9 @@ func processStraceLog(inputFile *os.File, outputFile *os.File, filePathRegex *re
 	return nil
 }
 
-// isGenericPath checks if a file path is generic and can be excluded
-func isGenericPath(path string) bool {
-	for _, generic := range genericPaths {
-		if path == generic {
-			return true
-		}
-	}
-	return false
+// isShortGenericPath checks if a file path is too short to be meaningful
+func isShortGenericPath(path string) bool {
+	return len(path) < 6
 }
 
 // hasExcludedPrefix checks if a file path starts with an excluded prefix
@@ -116,4 +94,19 @@ func hasExcludedPrefix(path string) bool {
 		}
 	}
 	return false
+}
+
+// updateWorkingDirectory checks for chdir syscall and updates the current directory
+func updateWorkingDirectory(line, currentDir string) string {
+	if !strings.Contains(line, "chdir(") {
+		return currentDir
+	}
+
+	dirRegex := regexp.MustCompile(`chdir\("([^"]+)"\)`)
+	matches := dirRegex.FindStringSubmatch(line)
+	if matches != nil && len(matches) > 1 {
+		return matches[1]
+	}
+
+	return currentDir
 }
