@@ -1,9 +1,12 @@
-// TO DO: Update filtering logic for chdir syscalls
+// TO DO: Order the filtered file paths
 // TO DO: Add more params to strace (e.g., mmap)
 
-// TO DO: Integrate /etc/os-release info for accurate base image
-// TO DO: Clean up: interfacing?
+// --- BACKLOG ---
+
 // TO DO: Add user in cmdparser
+// TO DO: Integrate /etc/os-release info for accurate base image
+// TO DO: More elegant solution than sleep for strace
+// TO DO: Clean up: interfacing?
 
 package process
 
@@ -68,7 +71,7 @@ func startProcessWithStrace(info *ProcessInfo) {
 	logger.Error(err, fmt.Sprintf("Failed to kill strace process"))
 
 	// Filter the strace log file to remove duplicates and invalid paths
-	FilterStraceLog(logfilePath, filteredLogfilePath)
+	FilterStraceLog(logfilePath, filteredLogfilePath, info.WorkingDirectory)
 }
 
 // prepareStraceCommand constructs the strace command to execute

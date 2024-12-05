@@ -16,7 +16,7 @@ var (
 )
 
 // FilterStraceLog reads a raw strace log file, filters file paths, and writes to a new log file
-func FilterStraceLog(inputFilePath, outputFilePath string) {
+func FilterStraceLog(inputFilePath, outputFilePath, initialWorkingDirectory string) {
 	// Compile a regex to match valid file paths
 	filePathRegex := regexp.MustCompile(`(?:\s|")((/|\.\/)[^" ]+)`)
 
@@ -31,15 +31,15 @@ func FilterStraceLog(inputFilePath, outputFilePath string) {
 	defer outputFile.Close()
 
 	// Process the file paths
-	err = processStraceLog(inputFile, outputFile, filePathRegex)
+	err = processStraceLog(inputFile, outputFile, filePathRegex, initialWorkingDirectory)
 	logger.Error(err, "Failed to process strace log")
 }
 
 // processStraceLog scans the input file, filters file paths, and writes them to the output file
-func processStraceLog(inputFile *os.File, outputFile *os.File, filePathRegex *regexp.Regexp) error {
+func processStraceLog(inputFile *os.File, outputFile *os.File, filePathRegex *regexp.Regexp, initialWorkingDirectory string) error {
 	// Track seen file paths to remove duplicates
 	seenPaths := make(map[string]bool)
-	currentWorkingDirectory := "/"
+	currentWorkingDirectory := initialWorkingDirectory
 
 	scanner := bufio.NewScanner(inputFile)
 	for scanner.Scan() {
@@ -53,7 +53,6 @@ func processStraceLog(inputFile *os.File, outputFile *os.File, filePathRegex *re
 		if match == nil {
 			continue
 		}
-
 		filePath := match[1]
 
 		// Resolve relative paths (e.g., "./file")
