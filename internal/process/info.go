@@ -2,14 +2,55 @@ package process
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"os/user"
 	"strconv"
 	"strings"
 
+	"application_profiling/internal/parser"
 	"application_profiling/internal/util/logger"
 )
+
+type ProcessInfo struct {
+	PID                  int
+	ExecutablePath       string
+	CommandLineArgs      []byte
+	WorkingDirectory     string
+	EnvironmentVariables []string
+	ProcessOwner         string
+	ReconstructedCommand string
+	Sockets              []string
+}
+
+func GetProcessInfo(processID int) *ProcessInfo {
+	info := &ProcessInfo{
+		PID: processID,
+	}
+
+	info.ExecutablePath = GetExecutablePath(processID)
+	info.CommandLineArgs = GetCommandLineArgs(processID)
+	info.WorkingDirectory = GetWorkingDirectory(processID)
+	info.EnvironmentVariables = GetEnvironmentVariables(processID)
+	info.ProcessOwner = GetProcessOwner(processID)
+	info.Sockets = GetSockets(processID)
+	info.ReconstructedCommand = parser.ParseCommandLine(info.ExecutablePath, info.CommandLineArgs)
+
+	return info
+}
+
+// LogProcessDetails logs key details about a process in one method.
+func (info *ProcessInfo) LogProcessDetails() {
+	log.Printf("[DEBUG] Process ID: %d", info.PID)
+	log.Printf("[DEBUG] Executable path: %s", info.ExecutablePath)
+	log.Printf("[DEBUG] Command-line arguments: %s", info.CommandLineArgs)
+	log.Printf("[DEBUG] Working directory: %s", info.WorkingDirectory)
+	log.Printf("[DEBUG] Environment variables: %v", info.EnvironmentVariables)
+	log.Printf("[DEBUG] Process owner: %s", info.ProcessOwner)
+	log.Printf("[DEBUG] Reconstructed command: %s", info.ReconstructedCommand)
+	log.Printf("[DEBUG] Sockets: %v", info.Sockets)
+}
 
 // GetExecutablePath retrieves the path to the executable of the process
 func GetExecutablePath(processID int) string {
