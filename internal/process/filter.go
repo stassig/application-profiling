@@ -10,13 +10,12 @@ import (
 
 var (
 	genericPaths = []string{
-		"/", "/bin", "/sbin", "/lib", "/lib64", "/usr", "/etc", "/dev",
-		"/proc", "/sys", "/run", "/var", "/var/log", "/var/cache", "/var/tmp",
-		"/tmp", "/home", "/root", "/usr/share/locale", "/usr/lib/locale",
+		"/", "/bin", "/sbin", "/lib", "/lib64", "/usr", "/etc", "/dev", "/proc", "/sys",
+		"/run", "/var", "/tmp", "/home", "/root", "/opt", "/mnt", "/media", "/srv", "/boot",
 	}
 
 	excludePrefixes = []string{
-		"/dev/", "/proc/", "/sys/", "/run/", "/tmp/",
+		"/dev/", "/proc/", "/sys/", "/run/", "/tmp/", "/usr/lib/locale/", "/usr/share/locale/",
 	}
 )
 

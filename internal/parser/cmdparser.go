@@ -1,6 +1,6 @@
 // TO DO: Refactor extractFlagsAndArguments
 
-package cmdparser
+package parser
 
 import (
 	"fmt"

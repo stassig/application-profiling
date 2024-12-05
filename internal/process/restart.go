@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"time"
 
-	"application_profiling/internal/cmdparser"
+	"application_profiling/internal/parser"
 	"application_profiling/internal/util/logger"
 )
 
@@ -26,7 +26,7 @@ func RestartProcess(processID int) {
 	processOwner := GetProcessOwner(processID)
 	sockets := GetSockets(processID)
 	// Parse the command-line string into a valid command
-	reconstructedCommand := cmdparser.ParseCommandLine(executablePath, commandLineArgs)
+	reconstructedCommand := parser.ParseCommandLine(executablePath, commandLineArgs)
 
 	// Log debug information
 	logProcessDetails(processID, executablePath, commandLineArgs, workingDirectory, environmentVariables, processOwner, reconstructedCommand, sockets)
@@ -43,35 +43,52 @@ func terminateProcess(processID int) {
 	time.Sleep(5 * time.Second)
 }
 
-// startProcessWithStrace starts a process with `strace` monitoring
+// startProcessWithStrace starts a process with strace monitoring
 func startProcessWithStrace(processID int, command, workingDirectory string, environmentVariables []string, user string, sockets []string) {
+	// Ensure the directories for the sockets exist
 	EnsureSocketDirectories(sockets, user)
-	// Hardcoded path for strace output log file (for now)
-	logfilePath := fmt.Sprintf("/home/stassig/go/application-profiling/strace_log_%d.log", processID)
-	filteredLogfilePath := fmt.Sprintf("/home/stassig/go/application-profiling/filtered_strace_log_%d.log", processID)
+
 	// Prepare the strace command
-	cmd := exec.Command("sudo", "strace", "-f", "-e", "trace=open,openat,chdir", "-o", logfilePath, "bash", "-c", command)
-	cmd.Dir = workingDirectory
-	cmd.Env = environmentVariables
+	cmd := prepareStraceCommand(processID, command, workingDirectory, environmentVariables)
 	var stderrBuffer bytes.Buffer
 	cmd.Stderr = &stderrBuffer
 
-	log.Printf("[INFO] Starting process as user %s with strace: %s\n", user, command)
+	// Start the process with strace
+	logger.Info(fmt.Sprintf("Starting process with strace: %s", command))
 	err := cmd.Start()
 	logger.Error(err, fmt.Sprintf("Failed to start process: %s", stderrBuffer.String()))
 
-	// Sleep for 5 seconds to allow strace to gather data
-	time.Sleep(7 * time.Second)
-
-	log.Println("[INFO] Process started successfully")
-	log.Printf("[INFO] strace PID: %d\n", cmd.Process.Pid)
+	// Sleep for a few seconds to allow strace to capture
+	time.Sleep(5 * time.Second)
 
 	// Terminate the strace process after data collection
 	err = cmd.Process.Kill()
 	logger.Warning(fmt.Sprintf("Failed to kill strace process: %v", err))
 
 	// Filter the strace log file to remove duplicates and invalid paths
+	logfilePath := fmt.Sprintf("/home/stassig/go/application-profiling/strace_log_%d.log", processID)
+	filteredLogfilePath := fmt.Sprintf("/home/stassig/go/application-profiling/filtered_strace_log_%d.log", processID)
 	FilterStraceLog(logfilePath, filteredLogfilePath)
+}
+
+// prepareStraceCommand constructs the strace command to execute
+func prepareStraceCommand(processID int, command, workingDirectory string, environmentVariables []string) *exec.Cmd {
+	logfilePath := fmt.Sprintf("/home/stassig/go/application-profiling/strace_log_%d.log", processID)
+
+	// Prepare the strace command arguments
+	cmdArgs := []string{
+		"strace",
+		"-f",
+		"-e", "trace=open,openat,chdir",
+		"-o", logfilePath,
+		"bash", "-c", command,
+	}
+
+	cmd := exec.Command("sudo", cmdArgs...)
+	cmd.Dir = workingDirectory
+	cmd.Env = environmentVariables
+
+	return cmd
 }
 
 // logProcessDetails logs key details about a process in one method.
