@@ -1,7 +1,9 @@
 // TO DO: Update filtering logic for chdir syscalls
 // TO DO: Add more params to strace (e.g., mmap)
+
 // TO DO: Integrate /etc/os-release info for accurate base image
-// TO DO: Clean up: interfacing;
+// TO DO: Clean up: interfacing?
+// TO DO: Add user in cmdparser
 
 package process
 
@@ -32,20 +34,21 @@ func RestartProcess(processID int) {
 
 // terminateProcess stops the process with the given PID
 func terminateProcess(processID int) {
+	logger.Info(fmt.Sprintf("Terminating process with PID %d", processID))
 	err := exec.Command("sudo", "kill", strconv.Itoa(processID)).Run()
-	logger.Error(err, fmt.Sprintf("Terminating process with PID %d", processID))
+	logger.Error(err, fmt.Sprintf("Failed to terminate process with PID %d", processID))
 	// Sleep for a few seconds to allow the process to terminate
 	time.Sleep(5 * time.Second)
 }
 
 // startProcessWithStrace starts a process with strace monitoring
 func startProcessWithStrace(info *ProcessInfo) {
+	// Ensure the directories for the sockets exist
+	EnsureSocketDirectories(info.Sockets, info.ProcessOwner)
+
 	// Get the log file paths
 	logfilePath := getLogFilePath(info.PID, "")
 	filteredLogfilePath := getLogFilePath(info.PID, "_filtered")
-
-	// Ensure the directories for the sockets exist
-	EnsureSocketDirectories(info.Sockets, info.ProcessOwner)
 
 	// Prepare the strace command
 	cmd := prepareStraceCommand(info, logfilePath)
@@ -86,6 +89,7 @@ func prepareStraceCommand(info *ProcessInfo, logfilePath string) *exec.Cmd {
 	return cmd
 }
 
+// getLogFilePath generates the path for the strace log file
 func getLogFilePath(pid int, suffix string) string {
 	currentDirectory, err := os.Getwd()
 	logger.Error(err, "Failed to get current directory")
