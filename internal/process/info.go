@@ -13,10 +13,11 @@ import (
 	"application_profiling/internal/util/logger"
 )
 
+// ProcessInfo contains key information about a process
 type ProcessInfo struct {
 	PID                  int
 	ExecutablePath       string
-	CommandLineArgs      []byte
+	CommandLineArgs      []string
 	WorkingDirectory     string
 	EnvironmentVariables []string
 	ProcessOwner         string
@@ -24,6 +25,7 @@ type ProcessInfo struct {
 	Sockets              []string
 }
 
+// GetProcessInfo retrieves key information about a process by its Process ID (PID)
 func GetProcessInfo(processID int) *ProcessInfo {
 	info := &ProcessInfo{
 		PID: processID,
@@ -54,6 +56,7 @@ func (info *ProcessInfo) LogProcessDetails() {
 
 // GetExecutablePath retrieves the path to the executable of the process
 func GetExecutablePath(processID int) string {
+	// Read the symbolic link to the executable from /proc/<PID>/exe
 	executablePath := fmt.Sprintf("/proc/%d/exe", processID)
 	resolvedPath, err := os.Readlink(executablePath)
 	logger.Error(err, "Reading process executable path")
@@ -61,15 +64,20 @@ func GetExecutablePath(processID int) string {
 }
 
 // GetCommandLineArgs retrieves the command-line arguments of the process
-func GetCommandLineArgs(processID int) []byte {
+func GetCommandLineArgs(processID int) []string {
+	// Read the command-line arguments from /proc/<PID>/cmdline
 	commandLinePath := fmt.Sprintf("/proc/%d/cmdline", processID)
-	commandLineArgs, err := os.ReadFile(commandLinePath)
+	commandLineData, err := os.ReadFile(commandLinePath)
 	logger.Error(err, "Reading process command-line arguments")
+
+	// Replace null bytes with spaces and split the string into fields
+	commandLineArgs := strings.Fields(strings.ReplaceAll(string(commandLineData), "\x00", " "))
 	return commandLineArgs
 }
 
 // GetWorkingDirectory retrieves the working directory of the process
 func GetWorkingDirectory(processID int) string {
+	// Read the symbolic link to the working directory from /proc/<PID>/cwd
 	workingDirectoryPath := fmt.Sprintf("/proc/%d/cwd", processID)
 	workingDirectory, err := os.Readlink(workingDirectoryPath)
 	logger.Error(err, "Reading process working directory")
@@ -78,6 +86,7 @@ func GetWorkingDirectory(processID int) string {
 
 // GetEnvironmentVariables retrieves and parses the environment variables of the process
 func GetEnvironmentVariables(processID int) []string {
+	// Read the environment variables from /proc/<PID>/environ
 	environmentFilePath := fmt.Sprintf("/proc/%d/environ", processID)
 	rawEnvironmentData, err := os.ReadFile(environmentFilePath)
 	logger.Error(err, "Reading process environment variables")
@@ -86,6 +95,7 @@ func GetEnvironmentVariables(processID int) []string {
 
 // GetOwnerByPID retrieves the user associated with the process ID
 func GetProcessOwner(processID int) string {
+	// Read the status file to get the UID of the process
 	statusFilePath := fmt.Sprintf("/proc/%d/status", processID)
 	rawStatusData, err := os.ReadFile(statusFilePath)
 	logger.Error(err, "Reading process status file")

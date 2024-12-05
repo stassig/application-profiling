@@ -10,30 +10,21 @@ import (
 
 // ParseCommandLine reconstructs the command string from the executable path and cmdline data.
 // It follows the steps of cleaning, splitting, and reformatting arguments as needed.
-func ParseCommandLine(executablePath string, commandLineData []byte) string {
-	// Step 1: Split the raw cmdline data into arguments
-	commandLineArguments := splitCommandLineData(commandLineData)
+func ParseCommandLine(executablePath string, commandLineArguments []string) string {
 
-	// Step 2: Remove any arguments before the executable path
+	// Step 1: Remove any arguments before the executable path
 	filteredArguments := filterArgumentsBeforeExecutable(commandLineArguments, executablePath)
 
-	// Step 3: Parse the filtered arguments into flags and their associated values
+	// Step 2: Parse the filtered arguments into flags and their associated values
 	flagsAndArguments := extractFlagsAndArguments(filteredArguments)
 
-	// Step 4: Wrap special arguments containing spaces or special characters in quotes
+	// Step 3: Wrap special arguments containing spaces or special characters in quotes
 	quotedArguments := quoteSpecialArguments(flagsAndArguments)
 
-	// Step 5: Construct the final command string
+	// Step 4: Construct the final command string
 	finalCommand := buildCommandString(executablePath, quotedArguments)
 
 	return finalCommand
-}
-
-// splitCommandLineData splits the raw cmdline data into individual arguments.
-func splitCommandLineData(data []byte) []string {
-	// Replace null bytes with spaces and split by whitespace
-	processedString := strings.ReplaceAll(string(data), "\x00", " ")
-	return strings.Fields(processedString)
 }
 
 // filterArgumentsBeforeExecutable removes any arguments that occur before the executable path.
