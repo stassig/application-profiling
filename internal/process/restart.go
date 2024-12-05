@@ -8,7 +8,9 @@ package process
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -32,15 +34,21 @@ func RestartProcess(processID int) {
 func terminateProcess(processID int) {
 	err := exec.Command("sudo", "kill", strconv.Itoa(processID)).Run()
 	logger.Error(err, fmt.Sprintf("Terminating process with PID %d", processID))
+	// Sleep for a few seconds to allow the process to terminate
 	time.Sleep(5 * time.Second)
 }
 
 // startProcessWithStrace starts a process with strace monitoring
 func startProcessWithStrace(info *ProcessInfo) {
+	// Get the log file paths
+	logfilePath := getLogFilePath(info.PID, "")
+	filteredLogfilePath := getLogFilePath(info.PID, "_filtered")
+
+	// Ensure the directories for the sockets exist
 	EnsureSocketDirectories(info.Sockets, info.ProcessOwner)
 
 	// Prepare the strace command
-	cmd := prepareStraceCommand(info)
+	cmd := prepareStraceCommand(info, logfilePath)
 	var stderrBuffer bytes.Buffer
 	cmd.Stderr = &stderrBuffer
 
@@ -54,18 +62,14 @@ func startProcessWithStrace(info *ProcessInfo) {
 
 	// Terminate the strace process after data collection
 	err = cmd.Process.Kill()
-	logger.Warning(fmt.Sprintf("Failed to kill strace process: %v", err))
+	logger.Error(err, fmt.Sprintf("Failed to kill strace process"))
 
 	// Filter the strace log file to remove duplicates and invalid paths
-	logfilePath := fmt.Sprintf("/home/stassig/go/application-profiling/strace_log_%d.log", info.PID)
-	filteredLogfilePath := fmt.Sprintf("/home/stassig/go/application-profiling/filtered_strace_log_%d.log", info.PID)
 	FilterStraceLog(logfilePath, filteredLogfilePath)
 }
 
 // prepareStraceCommand constructs the strace command to execute
-func prepareStraceCommand(info *ProcessInfo) *exec.Cmd {
-	logfilePath := fmt.Sprintf("/home/stassig/go/application-profiling/strace_log_%d.log", info.PID)
-
+func prepareStraceCommand(info *ProcessInfo, logfilePath string) *exec.Cmd {
 	// Prepare the strace command arguments
 	cmdArgs := []string{
 		"strace",
@@ -80,4 +84,10 @@ func prepareStraceCommand(info *ProcessInfo) *exec.Cmd {
 	cmd.Env = info.EnvironmentVariables
 
 	return cmd
+}
+
+func getLogFilePath(pid int, suffix string) string {
+	currentDirectory, err := os.Getwd()
+	logger.Error(err, "Failed to get current directory")
+	return filepath.Join(currentDirectory, fmt.Sprintf("strace_log_%d%s.log", pid, suffix))
 }
