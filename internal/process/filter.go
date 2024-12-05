@@ -12,8 +12,17 @@ import (
 )
 
 var (
+	genericPaths = []string{
+		"/", "/bin", "/sbin", "/lib", "/lib64", "/usr", "/etc", "/dev", "/proc", "/sys",
+		"/run", "/var", "/tmp", "/home", "/root", "/opt", "/mnt", "/media", "/srv", "/boot",
+		"/usr/bin", "/usr/sbin", "/usr/lib", "/usr/lib64", "/usr/local", "/usr/local/bin",
+		"/usr/local/sbin", "/usr/local/lib", "/usr/local/lib64", "/usr/share", "/usr/share/locale",
+		"/usr/share", "/var/lib", "/var/log", "/var/run", "/var/tmp", "/var/cache", "/var/spool",
+		"/var/mail", "/var/opt", "/var/backups", "/var/www", "/lib/x86_64-linux-gnu", "/lib32",
+	}
 	excludePrefixes = []string{
 		"/dev/", "/proc/", "/sys/", "/run/", "/tmp/", "/usr/lib/locale/", "/usr/share/locale/",
+		"/usr/local/bin/bash", "/usr/local/sbin/bash", "/usr/sbin/bash", "/usr/bin/bash",
 	}
 	filePathRegex = regexp.MustCompile(`(?:\s|")((/|\.\/)[^" ]+)`)
 	dirRegex      = regexp.MustCompile(`chdir\("([^"]+)"\)`)
@@ -47,6 +56,11 @@ func processStraceLog(inputFile *os.File, outputFile *os.File, initialWorkingDir
 		// Read the next line
 		line := scanner.Text()
 
+		// Skip lines with error indicators
+		if containsErrorIndicators(line) {
+			continue
+		}
+
 		// Update working directory if "chdir" syscall is encountered
 		currentWorkingDirectory = updateWorkingDirectory(line, currentWorkingDirectory)
 
@@ -57,7 +71,7 @@ func processStraceLog(inputFile *os.File, outputFile *os.File, initialWorkingDir
 		}
 
 		// Skip duplicates and invalid paths
-		if seenPaths[filePath] || isShortGenericPath(filePath) || hasExcludedPrefix(filePath) {
+		if seenPaths[filePath] || isGenericPath(filePath) || hasExcludedPrefix(filePath) {
 			continue
 		}
 
@@ -112,6 +126,21 @@ func updateWorkingDirectory(line, currentDir string) string {
 	}
 
 	return currentDir
+}
+
+// containsErrorIndicators checks if a line contains error-related indicators
+func containsErrorIndicators(line string) bool {
+	return strings.Contains(line, "(Invalid argument)") || strings.Contains(line, "(No such file or directory)")
+}
+
+// isGenericPath checks if a file path is generic and can be excluded
+func isGenericPath(path string) bool {
+	for _, generic := range genericPaths {
+		if path == generic || path == generic+"/" {
+			return true
+		}
+	}
+	return false
 }
 
 // isShortGenericPath checks if a file path is too short to be meaningful

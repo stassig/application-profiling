@@ -1,8 +1,10 @@
-// TO DO: Order the filtered file paths
-// TO DO: Add more params to strace (e.g., mmap)
+// TO DO: Save ProcessInfo to a file
+// TO DO: Map process info & tracing logs to Dockerfile
+// TO DO: Solve /usr/lib/mysql/plugin/ → /usr/lib/mysql/plugin/auth_socket.so (if parent directory exists in the list -> skip?)
 
 // --- BACKLOG ---
 
+// TO DO: Cleaner solution for generic paths
 // TO DO: Add user in cmdparser
 // TO DO: Integrate /etc/os-release info for accurate base image
 // TO DO: More elegant solution than sleep for strace
@@ -80,7 +82,7 @@ func prepareStraceCommand(info *ProcessInfo, logfilePath string) *exec.Cmd {
 	cmdArgs := []string{
 		"strace",
 		"-f",
-		"-e", "trace=open,openat,chdir",
+		"-e", "trace=file",
 		"-o", logfilePath,
 		"bash", "-c", info.ReconstructedCommand,
 	}
