@@ -4,8 +4,11 @@ import (
 	"application_profiling/internal/util/logger"
 	"bufio"
 	"fmt"
+	"log"
 	"os"
+	"os/user"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -21,6 +24,37 @@ func GetSockets(processID int) []string {
 	socketPaths := mapInodesToPaths(inodeSet)
 
 	return socketPaths
+}
+
+// EnsureSocketDirectories ensures that the directories for the given socket paths exist
+// and sets their ownership to the specified user.
+func EnsureSocketDirectories(sockets []string, username string) {
+	for _, socketPath := range sockets {
+		dirPath := filepath.Dir(socketPath)
+		log.Printf("[DEBUG] Ensuring directory for socket: %s", dirPath)
+
+		// Create directory if it doesn't exist
+		err := os.MkdirAll(dirPath, 0755)
+		logger.Error(err, fmt.Sprintf("Failed to create directory %s", dirPath))
+
+		log.Printf("[INFO] Directory created: %s", dirPath)
+
+		// Get user information
+		usr, err := user.Lookup(username)
+		logger.Error(err, fmt.Sprintf("Failed to look up user %s", username))
+
+		uid, err := strconv.Atoi(usr.Uid)
+		logger.Error(err, fmt.Sprintf("Failed to convert UID %s", usr.Uid))
+
+		gid, err := strconv.Atoi(usr.Gid)
+		logger.Error(err, fmt.Sprintf("Failed to convert GID %s", usr.Gid))
+
+		// Change ownership of the directory
+		err = os.Chown(dirPath, uid, gid)
+		logger.Error(err, fmt.Sprintf("Failed to change ownership of directory %s", dirPath))
+
+		log.Printf("[INFO] Ownership of directory %s set to user: %s (UID: %d, GID: %d)", dirPath, username, uid, gid)
+	}
 }
 
 // getProcessSocketInodes returns a set of socket inodes used by the given process IDs
