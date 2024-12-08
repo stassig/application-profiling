@@ -3,7 +3,6 @@ package main
 import (
 	"archive/tar"
 	"compress/gzip"
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -18,16 +17,16 @@ import (
 
 // ProcessInfo represents the process metadata.
 type ProcessInfo struct {
-	PID                  int      `yaml:"pid" json:"pid"`
-	ExecutablePath       string   `yaml:"executablepath" json:"executablepath"`
-	CommandLineArgs      []string `yaml:"commandlineargs" json:"commandlineargs"`
-	WorkingDirectory     string   `yaml:"workingdirectory" json:"workingdirectory"`
-	EnvironmentVariables []string `yaml:"environmentvariables" json:"environmentvariables"`
-	ProcessOwner         string   `yaml:"processowner" json:"processowner"`
-	ReconstructedCommand string   `yaml:"reconstructedcommand" json:"reconstructedcommand"`
-	UnixSockets          []string `yaml:"unixsockets" json:"unixsockets"`
-	ListeningTCP         []int    `yaml:"listeningtcp" json:"listeningtcp"`
-	ListeningUDP         []int    `yaml:"listeningudp" json:"listeningudp"`
+	PID                  int      `yaml:"pid"`
+	ExecutablePath       string   `yaml:"executablepath"`
+	CommandLineArgs      []string `yaml:"commandlineargs"`
+	WorkingDirectory     string   `yaml:"workingdirectory"`
+	EnvironmentVariables []string `yaml:"environmentvariables"`
+	ProcessOwner         string   `yaml:"processowner"`
+	ReconstructedCommand string   `yaml:"reconstructedcommand"`
+	UnixSockets          []string `yaml:"unixsockets"`
+	ListeningTCP         []int    `yaml:"listeningtcp"`
+	ListeningUDP         []int    `yaml:"listeningudp"`
 }
 
 var (
@@ -35,7 +34,7 @@ var (
 )
 
 func main() {
-	processInfoPath := flag.String("process-info", "99261_process_info.yaml", "Path to YAML/JSON file containing process info")
+	processInfoPath := flag.String("process-info", "process_info.yaml", "Path to YAML file containing process info")
 	traceLogPath := flag.String("trace-log", "nginx_strace_log_filtered.log", "Path to filtered trace log with file paths")
 	outputDockerfile := flag.String("dockerfile", "Dockerfile", "Output Dockerfile path")
 	profileDir := flag.String("profile-dir", "./profile", "Directory for minimal filesystem")
@@ -84,11 +83,6 @@ func loadProcessInfo(path string) (*ProcessInfo, error) {
 	info := &ProcessInfo{}
 	// Try YAML first
 	if yaml.Unmarshal(data, info) == nil && info.PID != 0 {
-		return info, nil
-	}
-
-	// Try JSON if YAML didn't yield a valid PID
-	if json.Unmarshal(data, info) == nil && info.PID != 0 {
 		return info, nil
 	}
 

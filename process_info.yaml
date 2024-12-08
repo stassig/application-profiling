@@ -1,0 +1,20 @@
+pid: 99261
+executablepath: /usr/sbin/nginx
+commandlineargs:
+  - "nginx:"
+  - master
+  - process
+  - /usr/sbin/nginx
+  - -g
+  - daemon
+  - on;
+  - master_process
+  - on;
+workingdirectory: /
+environmentvariables: []
+processowner: root
+reconstructedcommand: /usr/sbin/nginx -g "daemon on; master_process on;"
+unixsockets: []
+listeningtcp:
+  - 80
+listeningudp: []

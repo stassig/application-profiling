@@ -26,5 +26,6 @@ go.work.sum
 
 # Log files
 *_log_*
-profile*
+/profile
+profile.tar.gz
 *_process_info*

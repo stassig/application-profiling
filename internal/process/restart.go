@@ -1,5 +1,8 @@
-// TO DO: Map process info & tracing logs to Dockerfile (check appscoop example)
+// TO DO: Copy entire directories if present (e.g. /var/lib/mysql)
+// TO DO: Proper mapping for cmdline arguments
 // TO DO: Solve /usr/lib/mysql/plugin/ → /usr/lib/mysql/plugin/auth_socket.so (if parent directory exists in the list -> skip?)
+// TO DO: Add rules for /etc/nginx, /var/lib/mysql
+// TO DO: User groups, permissions, etc.
 
 // --- BACKLOG ---
 
@@ -7,7 +10,6 @@
 // TO DO: Integrate /etc/os-release info for accurate base image
 // TO DO: More elegant solution than sleep for strace
 // TO DO: Clean up: interfacing?; PortInfo struct?
-// TO DO: Could scope down to openat(), mkdir() & chrdir syscalls, and rules for /etc/nginx, /var/lib/mysql?
 
 package process
 
