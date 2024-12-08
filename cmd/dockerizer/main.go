@@ -149,30 +149,39 @@ func copyFileRecursively(src, profileDir string) error {
 			linkTarget = filepath.Join(filepath.Dir(src), linkTarget)
 		}
 
-		// Copy the target file first
+		// Copy the target file or directory recursively
 		if err := copyFileRecursively(linkTarget, profileDir); err != nil {
 			log.Printf("Warning: Failed to copy symlink target %s: %v", linkTarget, err)
 		}
 
-		// Now create the symlink in the profile
+		// Create the symlink in the profile
 		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 			return err
 		}
 		return os.Symlink(linkTarget, dst)
 	}
 
-	// If it's a directory
+	// If it's a directory, copy all its contents recursively
 	if stat.IsDir() {
-		// Just create the directory
 		if err := os.MkdirAll(dst, stat.Mode()); err != nil {
 			return err
+		}
+
+		entries, err := os.ReadDir(src)
+		if err != nil {
+			return err
+		}
+
+		for _, entry := range entries {
+			entryPath := filepath.Join(src, entry.Name())
+			if err := copyFileRecursively(entryPath, profileDir); err != nil {
+				log.Printf("Warning: Failed to copy entry %s: %v", entryPath, err)
+			}
 		}
 		return nil
 	}
 
-	// If it's a regular file or possibly a hard link
-	// For simplicity, we copy it as a new file. This does lose hard link info,
-	// but ensures all files are present.
+	// If it's a regular file, copy it
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return err
 	}
