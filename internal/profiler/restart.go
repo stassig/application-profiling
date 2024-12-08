@@ -1,3 +1,4 @@
+// TO DO: Change output files for logs and mapping!
 // TO DO: Proper mapping for cmdline arguments
 // TO DO: Solve /usr/lib/mysql/plugin/ → /usr/lib/mysql/plugin/auth_socket.so (if parent directory exists in the list -> skip?)
 // TO DO: Add rules for /etc/nginx, /var/lib/mysql
@@ -10,7 +11,7 @@
 // TO DO: More elegant solution than sleep for strace
 // TO DO: Clean up: interfacing?; PortInfo struct?
 
-package process
+package profiler
 
 import (
 	"bytes"

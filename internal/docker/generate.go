@@ -5,11 +5,11 @@ import (
 	"os"
 	"strings"
 
-	"application_profiling/internal/process"
+	"application_profiling/internal/profiler"
 )
 
 // GenerateDockerfile generates a Dockerfile based on process information.
-func GenerateDockerfile(info *process.ProcessInfo, dockerfilePath, tarFile string) error {
+func GenerateDockerfile(info *profiler.ProcessInfo, dockerfilePath, tarFile string) error {
 	dockerfile := &strings.Builder{}
 	fmt.Fprintln(dockerfile, "FROM ubuntu:latest")
 	fmt.Fprintf(dockerfile, "COPY %s /\n", tarFile)

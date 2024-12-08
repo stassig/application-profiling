@@ -1,4 +1,4 @@
-package process
+package profiler
 
 import (
 	"encoding/json"

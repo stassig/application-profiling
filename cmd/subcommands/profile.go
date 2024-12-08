@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"application_profiling/internal/process"
+	"application_profiling/internal/profiler"
 )
 
 func RunProfile(args []string) {
@@ -20,7 +20,7 @@ func RunProfile(args []string) {
 
 	if *useExecutable {
 		executablePath := "/usr/sbin/nginx"
-		processID = process.GetProcessIDbyExecutable(executablePath)
+		processID = profiler.GetProcessIDbyExecutable(executablePath)
 		if processID == 0 {
 			log.Fatalf("[ERROR] Failed to retrieve PID for executable: %s\n", executablePath)
 		}
@@ -38,5 +38,5 @@ func RunProfile(args []string) {
 	}
 
 	// Invoke the restart process functionality
-	process.RestartProcess(processID)
+	profiler.RestartProcess(processID)
 }

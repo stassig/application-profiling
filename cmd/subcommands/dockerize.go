@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	"application_profiling/internal/docker"
-	"application_profiling/internal/process"
+	"application_profiling/internal/profiler"
 )
 
 func RunDockerize(args []string) {
@@ -20,7 +20,7 @@ func RunDockerize(args []string) {
 	fs.Parse(args)
 
 	// 1. Load process info
-	info := process.LoadFromYAML(*processInfoPath)
+	info := profiler.LoadFromYAML(*processInfoPath)
 
 	// 2. Load file paths from trace log
 	files, err := docker.LoadFilePaths(*traceLogPath)
