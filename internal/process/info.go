@@ -9,22 +9,21 @@ import (
 	"strconv"
 	"strings"
 
-	"application_profiling/internal/parser"
 	"application_profiling/internal/util/logger"
 )
 
-// ProcessInfo contains key information about a process
+// ProcessInfo represents the process metadata.
 type ProcessInfo struct {
-	PID                  int
-	ExecutablePath       string
-	CommandLineArgs      []string
-	WorkingDirectory     string
-	EnvironmentVariables []string
-	ProcessOwner         string
-	ReconstructedCommand string
-	UnixSockets          []string
-	ListeningTCP         []int
-	ListeningUDP         []int
+	PID                  int      `yaml:"pid"`
+	ExecutablePath       string   `yaml:"executablepath"`
+	CommandLineArgs      []string `yaml:"commandlineargs"`
+	WorkingDirectory     string   `yaml:"workingdirectory"`
+	EnvironmentVariables []string `yaml:"environmentvariables"`
+	ProcessOwner         string   `yaml:"processowner"`
+	ReconstructedCommand string   `yaml:"reconstructedcommand"`
+	UnixSockets          []string `yaml:"unixsockets"`
+	ListeningTCP         []int    `yaml:"listeningtcp"`
+	ListeningUDP         []int    `yaml:"listeningudp"`
 }
 
 // GetProcessInfo retrieves key information about a process by its Process ID (PID)
@@ -46,7 +45,7 @@ func GetProcessInfo(processID int) *ProcessInfo {
 	info.UnixSockets = GetUnixDomainSockets(inodeSet)
 	info.ListeningTCP = GetListeningTCPPorts(inodeSet)
 	info.ListeningUDP = GetListeningUDPPorts(inodeSet)
-	info.ReconstructedCommand = parser.ParseCommandLine(info.ExecutablePath, info.CommandLineArgs)
+	info.ReconstructedCommand = ParseCommandLine(info.ExecutablePath, info.CommandLineArgs)
 
 	return info
 }

@@ -47,3 +47,15 @@ func (info *ProcessInfo) SaveAsJSON() {
 	_, err = file.Write(data)
 	logger.Error(err, fmt.Sprintf("Failed to write JSON data to file: %s", filePath))
 }
+
+// LoadFromYAML loads process info from a YAML file.
+func LoadFromYAML(path string) *ProcessInfo {
+	data, err := os.ReadFile(path)
+	logger.Error(err, fmt.Sprintf("Failed to read file: %s", path))
+
+	info := &ProcessInfo{}
+	err = yaml.Unmarshal(data, info)
+	logger.Error(err, "Failed to unmarshal YAML data")
+
+	return info
+}

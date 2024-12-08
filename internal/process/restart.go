@@ -3,6 +3,10 @@
 // TO DO: Solve /usr/lib/mysql/plugin/ → /usr/lib/mysql/plugin/auth_socket.so (if parent directory exists in the list -> skip?)
 // TO DO: Add rules for /etc/nginx, /var/lib/mysql
 // TO DO: User groups, permissions, etc.
+// ├── cmd/
+// │   ├── main.go
+// │   ├── dockerize.go      # CLI entry point for the "dockerize" command
+// │   ├── profile.go        # CLI entry point for the "profile" command
 
 // --- BACKLOG ---
 

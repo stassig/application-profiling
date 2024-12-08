@@ -1,6 +1,5 @@
 // TO DO: Refactor extractFlagsAndArguments
-
-package parser
+package process
 
 import (
 	"fmt"
