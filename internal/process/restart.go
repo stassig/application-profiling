@@ -1,4 +1,3 @@
-// TO DO: Save ProcessInfo to a file
 // TO DO: Map process info & tracing logs to Dockerfile (check appscoop example)
 // TO DO: Solve /usr/lib/mysql/plugin/ → /usr/lib/mysql/plugin/auth_socket.so (if parent directory exists in the list -> skip?)
 
@@ -31,6 +30,9 @@ func RestartProcess(processID int) {
 
 	// Log debug information
 	processInfo.LogProcessDetails()
+
+	// Save process information to a YAML file
+	processInfo.SaveAsYAML()
 
 	// Restart process with monitoring
 	terminateProcess(processInfo.PID)
