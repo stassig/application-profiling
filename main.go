@@ -16,8 +16,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// ProcessInfo is an example structure similar to what you have.
-// Adjust fields and tags as needed.
+// ProcessInfo represents the process metadata.
 type ProcessInfo struct {
 	PID                  int      `yaml:"pid" json:"pid"`
 	ExecutablePath       string   `yaml:"executablepath" json:"executablepath"`
@@ -30,6 +29,10 @@ type ProcessInfo struct {
 	ListeningTCP         []int    `yaml:"listeningtcp" json:"listeningtcp"`
 	ListeningUDP         []int    `yaml:"listeningudp" json:"listeningudp"`
 }
+
+var (
+	visitedFiles = make(map[string]bool) // track visited files to prevent infinite loops and duplicates
+)
 
 func main() {
 	processInfoPath := flag.String("process-info", "99261_process_info.yaml", "Path to YAML/JSON file containing process info")
@@ -104,36 +107,42 @@ func loadFilePaths(path string) ([]string, error) {
 		if l == "" || strings.HasPrefix(l, "#") {
 			continue
 		}
-		files = append(files, l)
+		if strings.HasPrefix(l, "/") {
+			files = append(files, l)
+		}
 	}
 	return files, nil
 }
 
 func copyFilesToProfile(files []string, profileDir string) error {
 	for _, f := range files {
-		// Ensure leading slash
-		if !strings.HasPrefix(f, "/") {
-			continue
-		}
-		dst := filepath.Join(profileDir, f)
-		if err := copyFileWithSymlinksPreserved(f, dst); err != nil {
+		if err := copyFileRecursively(f, profileDir); err != nil {
 			log.Printf("Warning: Failed to copy %s: %v", f, err)
 		}
 	}
 	return nil
 }
 
-func copyFileWithSymlinksPreserved(src, dst string) error {
+// copyFileRecursively copies a file, and if it's a symlink, resolves its target.
+// Also handles multiple layers of symlinks, hard links, etc.
+func copyFileRecursively(src, profileDir string) error {
+	if src == "" {
+		return nil
+	}
+
+	// If we've already processed this file, skip to avoid infinite loops
+	// or duplicates (especially with symlink chains).
+	if visitedFiles[src] {
+		return nil
+	}
+	visitedFiles[src] = true
+
 	stat, err := os.Lstat(src)
 	if err != nil {
 		return err
 	}
 
-	// Create parent dirs
-	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-		return err
-	}
-
+	dst := filepath.Join(profileDir, src)
 	if stat.Mode()&os.ModeSymlink != 0 {
 		// It's a symlink
 		linkTarget, err := os.Readlink(src)
@@ -141,25 +150,39 @@ func copyFileWithSymlinksPreserved(src, dst string) error {
 			return err
 		}
 
-		// Ensure that the link target is copied as well if it's an absolute path
-		if filepath.IsAbs(linkTarget) {
-			absTarget := linkTarget
-			targetDst := filepath.Join(filepath.Dir(dst), linkTarget)
-			if err := copyFileWithSymlinksPreserved(absTarget, targetDst); err != nil {
-				log.Printf("Warning: Failed to copy symlink target %s: %v", absTarget, err)
-			}
+		// If the linkTarget is relative, resolve it to absolute based on src directory
+		if !filepath.IsAbs(linkTarget) {
+			linkTarget = filepath.Join(filepath.Dir(src), linkTarget)
 		}
 
-		// Create the symlink in dst
+		// Copy the target file first
+		if err := copyFileRecursively(linkTarget, profileDir); err != nil {
+			log.Printf("Warning: Failed to copy symlink target %s: %v", linkTarget, err)
+		}
+
+		// Now create the symlink in the profile
+		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+			return err
+		}
 		return os.Symlink(linkTarget, dst)
 	}
 
-	// If it's a dir
+	// If it's a directory
 	if stat.IsDir() {
-		return os.MkdirAll(dst, stat.Mode())
+		// Just create the directory
+		if err := os.MkdirAll(dst, stat.Mode()); err != nil {
+			return err
+		}
+		return nil
 	}
 
-	// Otherwise it's a regular file or something else
+	// If it's a regular file or possibly a hard link
+	// For simplicity, we copy it as a new file. This does lose hard link info,
+	// but ensures all files are present.
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return err
+	}
+
 	in, err := os.Open(src)
 	if err != nil {
 		return err
@@ -249,7 +272,7 @@ func generateDockerfile(info *ProcessInfo, dockerfilePath, tarFile string) error
 		}
 	}
 
-	// If process owner is given, we assume it as "user:group". If group not known, same as user.
+	// If process owner is given, we assume it as "user:group". If not provided, default to root.
 	userSpec := info.ProcessOwner
 	if userSpec == "" {
 		userSpec = "root:root"
@@ -264,7 +287,7 @@ func generateDockerfile(info *ProcessInfo, dockerfilePath, tarFile string) error
 		fmt.Fprintf(dockerfile, "WORKDIR %s\n", info.WorkingDirectory)
 	}
 
-	// Expose ports derived from ListeningTCP or ListeningUDP
+	// Expose ports
 	for _, port := range info.ListeningTCP {
 		fmt.Fprintf(dockerfile, "EXPOSE %d/tcp\n", port)
 	}
