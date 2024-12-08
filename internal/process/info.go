@@ -22,21 +22,30 @@ type ProcessInfo struct {
 	EnvironmentVariables []string
 	ProcessOwner         string
 	ReconstructedCommand string
-	Sockets              []string
+	UnixSockets          []string
+	ListeningTCP         []int
+	ListeningUDP         []int
 }
 
 // GetProcessInfo retrieves key information about a process by its Process ID (PID)
 func GetProcessInfo(processID int) *ProcessInfo {
+	// Create a new ProcessInfo object
 	info := &ProcessInfo{
 		PID: processID,
 	}
 
+	// Get the set of socket inodes used by the process and its children
+	inodeSet := GetProcessInodeSet(processID)
+
+	// Get the process information
 	info.ExecutablePath = GetExecutablePath(processID)
 	info.CommandLineArgs = GetCommandLineArgs(processID)
 	info.WorkingDirectory = GetWorkingDirectory(processID)
 	info.EnvironmentVariables = GetEnvironmentVariables(processID)
 	info.ProcessOwner = GetProcessOwner(processID)
-	info.Sockets = GetSockets(processID)
+	info.UnixSockets = GetUnixDomainSockets(inodeSet)
+	info.ListeningTCP = GetListeningTCPPorts(inodeSet)
+	info.ListeningUDP = GetListeningUDPPorts(inodeSet)
 	info.ReconstructedCommand = parser.ParseCommandLine(info.ExecutablePath, info.CommandLineArgs)
 
 	return info
@@ -51,7 +60,9 @@ func (info *ProcessInfo) LogProcessDetails() {
 	log.Printf("[DEBUG] Environment variables: %v", info.EnvironmentVariables)
 	log.Printf("[DEBUG] Process owner: %s", info.ProcessOwner)
 	log.Printf("[DEBUG] Reconstructed command: %s", info.ReconstructedCommand)
-	log.Printf("[DEBUG] Sockets: %v", info.Sockets)
+	log.Printf("[DEBUG] Sockets: %v", info.UnixSockets)
+	log.Printf("[DEBUG] Listening TCP ports: %v", info.ListeningTCP)
+	log.Printf("[DEBUG] Listening UDP ports: %v", info.ListeningUDP)
 }
 
 // GetExecutablePath retrieves the path to the executable of the process

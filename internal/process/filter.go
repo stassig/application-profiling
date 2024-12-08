@@ -13,16 +13,24 @@ import (
 
 var (
 	genericPaths = []string{
-		"/", "/bin", "/sbin", "/lib", "/lib64", "/usr", "/etc", "/dev", "/proc", "/sys",
-		"/run", "/var", "/tmp", "/home", "/root", "/opt", "/mnt", "/media", "/srv", "/boot",
-		"/usr/bin", "/usr/sbin", "/usr/lib", "/usr/lib64", "/usr/local", "/usr/local/bin",
-		"/usr/local/sbin", "/usr/local/lib", "/usr/local/lib64", "/usr/share", "/usr/share/locale",
-		"/usr/share", "/var/lib", "/var/log", "/var/run", "/var/tmp", "/var/cache", "/var/spool",
-		"/var/mail", "/var/opt", "/var/backups", "/var/www", "/lib/x86_64-linux-gnu", "/lib32",
+		"/", "/bin", "/boot", "/boot/efi", "/dev", "/dev/pts", "/dev/shm", "/etc",
+		"/etc/network", "/etc/opt", "/etc/ssl", "/home", "/lib", "/lib32", "/lib64",
+		"/lib/firmware", "/lib/x86_64-linux-gnu", "/media", "/mnt", "/opt", "/proc",
+		"/root", "/run", "/run/lock", "/run/shm", "/sbin", "/srv", "/sys", "/tmp",
+		"/usr", "/usr/bin", "/usr/games", "/usr/include", "/usr/lib", "/usr/lib64",
+		"/usr/libexec", "/usr/lib/locale", "/usr/local", "/usr/local/bin",
+		"/usr/local/games", "/usr/local/lib", "/usr/local/lib64", "/usr/local/sbin",
+		"/usr/sbin", "/usr/share", "/usr/share/doc", "/usr/share/fonts",
+		"/usr/share/icons", "/usr/share/locale", "/usr/share/man", "/usr/share/themes",
+		"/var", "/var/backups", "/var/cache", "/var/lib", "/var/lib/apt",
+		"/var/lib/dhcp", "/var/lib/dpkg", "/var/lib/snapd", "/var/lib/systemd",
+		"/var/lock", "/var/log", "/var/mail", "/var/opt", "/var/run", "/var/spool",
+		"/var/tmp", "/var/www", "/usr/local/bin/bash", "/usr/local/sbin/bash",
+		"/usr/sbin/bash", "/usr/bin/bash",
 	}
+
 	excludePrefixes = []string{
 		"/dev/", "/proc/", "/sys/", "/run/", "/tmp/", "/usr/lib/locale/", "/usr/share/locale/",
-		"/usr/local/bin/bash", "/usr/local/sbin/bash", "/usr/sbin/bash", "/usr/bin/bash",
 	}
 	filePathRegex = regexp.MustCompile(`(?:\s|")((/|\.\/)[^" ]+)`)
 	dirRegex      = regexp.MustCompile(`chdir\("([^"]+)"\)`)

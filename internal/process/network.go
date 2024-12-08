@@ -12,18 +12,29 @@ import (
 	"strings"
 )
 
-// GetSockets retrieves a list of socket file paths used by the process and its child processes
-func GetSockets(processID int) []string {
-	// Collect all relevant process IDs
+// GetProcessInodeSet retrieves a set of socket inodes used by the specified process and its children
+func GetProcessInodeSet(processID int) map[string]struct{} {
 	processIDs := append([]int{processID}, GetChildProcessIDs(processID)...)
+	return getProcessSocketInodes(processIDs)
+}
 
-	// Get inodes associated with the processes
-	inodeSet := getProcessSocketInodes(processIDs)
+// GetUnixDomainSockets retrieves all Unix domain sockets for the specified process
+func GetUnixDomainSockets(inodeSet map[string]struct{}) []string {
+	return mapInodesToPaths(inodeSet)
+}
 
-	// Map inodes to socket paths
-	socketPaths := mapInodesToPaths(inodeSet)
+// GetListeningTCPPorts retrieves all TCP listening ports for the specified process
+func GetListeningTCPPorts(inodeSet map[string]struct{}) []int {
+	tcpPorts := parseListeningPortsFromNet(inodeSet, "/proc/net/tcp")
+	tcp6Ports := parseListeningPortsFromNet(inodeSet, "/proc/net/tcp6")
+	return removeDuplicatePorts(append(tcpPorts, tcp6Ports...))
+}
 
-	return socketPaths
+// GetListeningUDPPorts retrieves all UDP listening ports for the specified process
+func GetListeningUDPPorts(inodeSet map[string]struct{}) []int {
+	udpPorts := parseListeningPortsFromNet(inodeSet, "/proc/net/udp")
+	udp6Ports := parseListeningPortsFromNet(inodeSet, "/proc/net/udp6")
+	return removeDuplicatePorts(append(udpPorts, udp6Ports...))
 }
 
 // EnsureSocketDirectories ensures that the directories for the given socket paths exist
@@ -96,10 +107,7 @@ func getProcessSocketInodes(processIDs []int) map[string]struct{} {
 func mapInodesToPaths(inodeSet map[string]struct{}) []string {
 	var socketPaths []string
 	inodeToPath, err := parseProcNetUnix()
-	if err != nil {
-		logger.Error(err, "Parsing /proc/net/unix")
-		return socketPaths
-	}
+	logger.Error(err, "Parsing /proc/net/unix")
 
 	for inode := range inodeSet {
 		if path, exists := inodeToPath[inode]; exists && path != "" {
@@ -143,4 +151,72 @@ func parseProcNetUnix() (map[string]string, error) {
 	}
 
 	return inodeToPath, nil
+}
+
+// parseListeningPortsFromNet parses a /proc/net/* file for sockets in LISTEN state
+func parseListeningPortsFromNet(inodeSet map[string]struct{}, netFilePath string) []int {
+	file, err := os.Open(netFilePath)
+	logger.Error(err, fmt.Sprintf("Failed to open %s", netFilePath))
+	defer file.Close()
+
+	var listeningPorts []int
+	scanner := bufio.NewScanner(file)
+
+	// Skip the header line
+	if scanner.Scan() {
+		// Skip the header
+	}
+
+	for scanner.Scan() {
+		fields := strings.Fields(scanner.Text())
+		if len(fields) < 10 {
+			continue
+		}
+
+		// Extract inode and state
+		localAddress := fields[1] // Format: "0100007F:1F90" (IP:PORT in hex)
+		state := fields[3]        // Connection state (e.g., "0A" for LISTEN)
+		inode := fields[9]        // Inode number
+
+		// Check if this socket is in LISTEN state and belongs to the target process
+		if state == "0A" { // 0A == LISTEN
+			if _, exists := inodeSet[inode]; exists {
+				port := extractPortFromHex(localAddress)
+				if port > 0 {
+					listeningPorts = append(listeningPorts, port)
+				}
+			}
+		}
+	}
+
+	return listeningPorts
+}
+
+// extractPortFromHex extracts the port from a hex-formatted "IP:PORT" string
+func extractPortFromHex(addrPort string) int {
+	parts := strings.Split(addrPort, ":")
+	if len(parts) != 2 {
+		return 0
+	}
+	portHex := parts[1]
+	port, err := strconv.ParseInt(portHex, 16, 32)
+	if err != nil {
+		return 0
+	}
+	return int(port)
+}
+
+// removeDuplicatePorts removes duplicates from a slice of ports
+func removeDuplicatePorts(ports []int) []int {
+	seen := make(map[int]struct{})
+	var uniquePorts []int
+
+	for _, port := range ports {
+		if _, exists := seen[port]; !exists {
+			seen[port] = struct{}{}
+			uniquePorts = append(uniquePorts, port)
+		}
+	}
+
+	return uniquePorts
 }

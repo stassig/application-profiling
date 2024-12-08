@@ -1,14 +1,14 @@
 // TO DO: Save ProcessInfo to a file
-// TO DO: Map process info & tracing logs to Dockerfile
+// TO DO: Map process info & tracing logs to Dockerfile (check appscoop example)
 // TO DO: Solve /usr/lib/mysql/plugin/ → /usr/lib/mysql/plugin/auth_socket.so (if parent directory exists in the list -> skip?)
 
 // --- BACKLOG ---
 
-// TO DO: Cleaner solution for generic paths
 // TO DO: Add user in cmdparser
 // TO DO: Integrate /etc/os-release info for accurate base image
 // TO DO: More elegant solution than sleep for strace
-// TO DO: Clean up: interfacing?
+// TO DO: Clean up: interfacing?; PortInfo struct?
+// TO DO: Could scope down to openat(), mkdir() & chrdir syscalls, and rules for /etc/nginx, /var/lib/mysql?
 
 package process
 
@@ -49,7 +49,7 @@ func terminateProcess(processID int) {
 // startProcessWithStrace starts a process with strace monitoring
 func startProcessWithStrace(info *ProcessInfo) {
 	// Ensure the directories for the sockets exist
-	EnsureSocketDirectories(info.Sockets, info.ProcessOwner)
+	EnsureSocketDirectories(info.UnixSockets, info.ProcessOwner)
 
 	// Get the log file paths
 	logfilePath := getLogFilePath(info.PID, "")
@@ -82,7 +82,7 @@ func prepareStraceCommand(info *ProcessInfo, logfilePath string) *exec.Cmd {
 	cmdArgs := []string{
 		"strace",
 		"-f",
-		"-e", "trace=file",
+		"-e", "trace=openat,chdir,mkdir",
 		"-o", logfilePath,
 		"bash", "-c", info.ReconstructedCommand,
 	}
