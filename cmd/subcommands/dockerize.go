@@ -12,8 +12,8 @@ import (
 
 func RunDockerize(args []string) {
 	fs := flag.NewFlagSet("dockerize", flag.ExitOnError)
-	processInfoPath := fs.String("process-info", "process_info.yaml", "Path to YAML file containing process info")
-	traceLogPath := fs.String("trace-log", "nginx_strace_log_filtered.log", "Path to filtered trace log with file paths")
+	processInfoPath := fs.String("process-info", "./samples/process_info.yaml", "Path to YAML file containing process info")
+	traceLogPath := fs.String("trace-log", "./samples/strace.log", "Path to filtered trace log with file paths")
 	outputDockerfile := fs.String("dockerfile", "Dockerfile", "Output Dockerfile path")
 	profileDir := fs.String("profile-dir", "./profile", "Directory for minimal filesystem")
 	tarFile := fs.String("tar-file", "profile.tar.gz", "Tar file to create from the profile directory")

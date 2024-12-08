@@ -25,8 +25,4 @@ go.work.sum
 .env
 
 # Log files
-*_log_*
-/profile
-profile.tar.gz
-*_process_info*
-Dockerfile
+/bin/
