@@ -25,17 +25,8 @@ import (
 	"application_profiling/internal/util/logger"
 )
 
-// RestartProcess handles restarting a process by its Process ID (PID)
-func RestartProcess(processID int) {
-	// Retrieve process information
-	processInfo := GetProcessInfo(processID)
-
-	// Log debug information
-	processInfo.LogProcessDetails()
-
-	// Save process information to a YAML file
-	processInfo.SaveAsYAML()
-
+// RestartProcess handles restarting a process using its ProcessInfo
+func RestartProcess(processInfo *ProcessInfo) {
 	// Restart process with monitoring
 	terminateProcess(processInfo.PID)
 	startProcessWithStrace(processInfo)
