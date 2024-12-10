@@ -13,26 +13,6 @@ import (
 )
 
 var (
-	genericPaths = []string{
-		"/", "/bin", "/boot", "/boot/efi", "/dev", "/dev/pts", "/dev/shm", "/etc",
-		"/etc/network", "/etc/opt", "/etc/ssl", "/home", "/lib", "/lib32", "/lib64",
-		"/lib/firmware", "/lib/x86_64-linux-gnu", "/media", "/mnt", "/opt", "/proc",
-		"/root", "/run", "/run/lock", "/run/shm", "/sbin", "/srv", "/sys", "/tmp",
-		"/usr", "/usr/bin", "/usr/games", "/usr/include", "/usr/lib", "/usr/lib64",
-		"/usr/libexec", "/usr/lib/locale", "/usr/local", "/usr/local/bin",
-		"/usr/local/games", "/usr/local/lib", "/usr/local/lib64", "/usr/local/sbin",
-		"/usr/sbin", "/usr/share", "/usr/share/doc", "/usr/share/fonts",
-		"/usr/share/icons", "/usr/share/locale", "/usr/share/man", "/usr/share/themes",
-		"/var", "/var/backups", "/var/cache", "/var/lib", "/var/lib/apt",
-		"/var/lib/dhcp", "/var/lib/dpkg", "/var/lib/snapd", "/var/lib/systemd",
-		"/var/lock", "/var/log", "/var/mail", "/var/opt", "/var/run", "/var/spool",
-		"/var/tmp", "/var/www", "/usr/local/bin/bash", "/usr/local/sbin/bash",
-		"/usr/sbin/bash", "/usr/bin/bash",
-	}
-
-	excludePrefixes = []string{
-		"/dev/", "/proc/", "/sys/", "/run/", "/tmp/", "/usr/lib/locale/", "/usr/share/locale/",
-	}
 	filePathRegex = regexp.MustCompile(`(?:\s|")((/|\.\/)[^" ]+)`)
 	dirRegex      = regexp.MustCompile(`chdir\("([^"]+)"\)`)
 )
@@ -66,7 +46,6 @@ func processStraceLog(inputFile *os.File, outputFile *os.File, initialWorkingDir
 
 	scanner := bufio.NewScanner(inputFile)
 	for scanner.Scan() {
-		// Read the next line
 		line := scanner.Text()
 
 		// Skip lines with error indicators
@@ -84,24 +63,23 @@ func processStraceLog(inputFile *os.File, outputFile *os.File, initialWorkingDir
 		}
 
 		// Skip duplicates and invalid paths
-		if seenPaths[filePath] || isGenericPath(filePath) || hasExcludedPrefix(filePath) {
+		if seenPaths[filePath] || isGenericOrExcluded(filePath) {
 			continue
 		}
 
-		// Add to seen paths and collect for sorting
+		// Mark as seen and append to list
 		seenPaths[filePath] = true
 		filePaths = append(filePaths, filePath)
 	}
 
-	// Handle scanner errors
 	if err := scanner.Err(); err != nil {
 		return err
 	}
 
-	// Sort the file paths
-	sort.Strings(filePaths)
+	// Collapse application-specific directories
+	filePaths = collapseApplicationSpecificDirs(filePaths)
 
-	// Write the sorted paths to the output file
+	// Write the final paths
 	for _, filePath := range filePaths {
 		if _, err := outputFile.WriteString(filePath + "\n"); err != nil {
 			return err
@@ -137,7 +115,6 @@ func updateWorkingDirectory(line, currentDir string) string {
 	if matches != nil && len(matches) > 1 {
 		return matches[1]
 	}
-
 	return currentDir
 }
 
@@ -146,27 +123,81 @@ func containsErrorIndicators(line string) bool {
 	return strings.Contains(line, "(Invalid argument)") || strings.Contains(line, "(No such file or directory)")
 }
 
-// isGenericPath checks if a file path is generic and can be excluded
+// isGenericOrExcluded checks if a file path is generic or excluded
+func isGenericOrExcluded(path string) bool {
+	return isGenericPath(path) || hasExcludedPrefix(path)
+}
+
+// isGenericPath checks if a file path is system-generic
 func isGenericPath(path string) bool {
-	for _, generic := range genericPaths {
-		if path == generic || path == generic+"/" {
-			return true
-		}
-	}
-	return false
+	// Normalize by removing trailing slash
+	clean := strings.TrimSuffix(path, "/")
+	return GenericPathsSet[clean]
 }
 
-// isShortGenericPath checks if a file path is too short to be meaningful
-func isShortGenericPath(path string) bool {
-	return len(path) < 6
-}
-
-// hasExcludedPrefix checks if a file path starts with an excluded prefix
+// hasExcludedPrefix checks if a file path starts with any excluded prefix
 func hasExcludedPrefix(path string) bool {
-	for _, prefix := range excludePrefixes {
+	for prefix := range ExcludePrefixesSet {
 		if strings.HasPrefix(path, prefix) {
 			return true
 		}
 	}
 	return false
+}
+
+// collapseApplicationSpecificDirs collapses application-specific directories
+func collapseApplicationSpecificDirs(filePaths []string) []string {
+
+	collapsed := make([]string, 0, len(filePaths))
+
+	for _, path := range filePaths {
+		// Split the path into components
+		parts := strings.Split(strings.TrimPrefix(path, "/"), "/")
+		if len(parts) <= 1 {
+			// Nothing to collapse if it's just "/etc" or "/usr"
+			collapsed = append(collapsed, path)
+			continue
+		}
+
+		// Attempt to find the shortest prefix that is not generic.
+		// We'll walk down the path components until we hit a directory
+		// that isn't listed in GenericPaths.
+		//
+		// For example: /etc/nginx/conf.d
+		//   - Check "/etc" (generic)
+		//   - Next "/etc/nginx" (not generic?), if not generic and not excluded:
+		//       we consider this an application-specific directory.
+		//
+		// If "/etc/nginx" is determined to be application-specific,
+		// we collapse everything under it to "/etc/nginx".
+
+		candidate := "/"
+		collapsedPath := path // default to original if we can't collapse
+		for i := 0; i < len(parts); i++ {
+			candidate = filepath.Join(candidate, parts[i])
+			// Once we pass the first component (the generic directory),
+			// check if candidate is still generic or excluded.
+			if i > 0 && !isGenericOrExcluded(candidate) {
+				// We've found a directory that is not in GenericPaths and not excluded,
+				// so treat it as the top-level application-specific directory.
+				collapsedPath = candidate
+				break
+			}
+		}
+
+		collapsed = append(collapsed, collapsedPath)
+	}
+
+	// Deduplicate after collapsing
+	seen := make(map[string]bool)
+	finalPaths := []string{}
+	for _, p := range collapsed {
+		if !seen[p] {
+			seen[p] = true
+			finalPaths = append(finalPaths, p)
+		}
+	}
+
+	sort.Strings(finalPaths) // Ensure sorted order
+	return finalPaths
 }

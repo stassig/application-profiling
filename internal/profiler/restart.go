@@ -1,5 +1,3 @@
-// TO DO: Don't add entire directories from trace file
-// TO DO: Add rules for /etc/nginx, /var/lib/mysql
 // TO DO: Proper mapping for cmdline arguments
 // ТО DO: Indentation for Dockerfile
 // TO DO: Refactor dockerize action
