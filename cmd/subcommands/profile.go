@@ -28,6 +28,9 @@ func RunProfile(args []string) {
 
 	// 4. Restart the process with strace monitoring
 	profiler.RestartProcess(processInfo)
+
+	// 5. Filter the strace log file to remove duplicates and invalid paths
+	profiler.FilterStraceLog(processInfo)
 }
 
 // getProcessID retrieves the process ID from the arguments or by using the executable path

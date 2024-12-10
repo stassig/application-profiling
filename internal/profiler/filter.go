@@ -4,6 +4,7 @@ import (
 	"application_profiling/internal/util/logger"
 	"bufio"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -37,7 +38,11 @@ var (
 )
 
 // FilterStraceLog reads a raw strace log file, filters file paths, and writes to a new log file
-func FilterStraceLog(inputFilePath, outputFilePath, initialWorkingDirectory string) {
+func FilterStraceLog(info *ProcessInfo) {
+	// Get the input and output file paths
+	inputFilePath := BuildFilePath("bin/tracing", fmt.Sprintf("strace_log_%d.log", info.PID))
+	outputFilePath := BuildFilePath("bin/tracing", fmt.Sprintf("strace_log_%d_filtered.log", info.PID))
+
 	// Open input file
 	inputFile, err := os.Open(inputFilePath)
 	logger.Error(err, "Failed to open input file")
@@ -49,7 +54,7 @@ func FilterStraceLog(inputFilePath, outputFilePath, initialWorkingDirectory stri
 	defer outputFile.Close()
 
 	// Process the strace log
-	err = processStraceLog(inputFile, outputFile, initialWorkingDirectory)
+	err = processStraceLog(inputFile, outputFile, info.WorkingDirectory)
 	logger.Error(err, "Failed to process strace log")
 }
 

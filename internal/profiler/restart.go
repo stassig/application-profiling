@@ -1,24 +1,23 @@
-// TO DO: Proper mapping for cmdline arguments
-// TO DO: Solve /usr/lib/mysql/plugin/ → /usr/lib/mysql/plugin/auth_socket.so (if parent directory exists in the list -> skip?)
+// TO DO: Don't add entire directories from trace file
 // TO DO: Add rules for /etc/nginx, /var/lib/mysql
-// TO DO: User groups, permissions, etc.
-// TO DO: Move filter call to main
+// TO DO: Proper mapping for cmdline arguments
+// ТО DO: Indentation for Dockerfile
+// TO DO: Refactor dockerize action
 
 // --- BACKLOG ---
 
 // TO DO: Add user in cmdparser
 // TO DO: Integrate /etc/os-release info for accurate base image
 // TO DO: More elegant solution than sleep for strace
-// TO DO: Clean up: interfacing?; PortInfo struct?
+// TO DO: Clean up: interfacing; PortInfo struct?
+// TO DO: User groups, permissions, etc.
 
 package profiler
 
 import (
 	"bytes"
 	"fmt"
-	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"time"
 
@@ -46,9 +45,8 @@ func startProcessWithStrace(info *ProcessInfo) {
 	// Ensure the directories for the sockets exist
 	EnsureSocketDirectories(info.UnixSockets, info.ProcessOwner)
 
-	// Get the log file paths
-	logfilePath := getLogFilePath(info.PID, "")
-	filteredLogfilePath := getLogFilePath(info.PID, "_filtered")
+	// Get the output file path for strace
+	logfilePath := BuildFilePath("bin/tracing", fmt.Sprintf("strace_log_%d.log", info.PID))
 
 	// Prepare the strace command
 	cmd := prepareStraceCommand(info, logfilePath)
@@ -66,9 +64,6 @@ func startProcessWithStrace(info *ProcessInfo) {
 	// Terminate the strace process after data collection
 	err = cmd.Process.Kill()
 	logger.Error(err, fmt.Sprintf("Failed to kill strace process"))
-
-	// Filter the strace log file to remove duplicates and invalid paths
-	FilterStraceLog(logfilePath, filteredLogfilePath, info.WorkingDirectory)
 }
 
 // prepareStraceCommand constructs the strace command to execute
@@ -87,20 +82,4 @@ func prepareStraceCommand(info *ProcessInfo, logfilePath string) *exec.Cmd {
 	cmd.Env = info.EnvironmentVariables
 
 	return cmd
-}
-
-// getLogFilePath generates the path for the strace log file
-func getLogFilePath(pid int, suffix string) string {
-	currentDirectory, err := os.Getwd()
-	logger.Error(err, "Failed to get current directory")
-
-	// Append the desired subdirectory to the current directory
-	tracingDir := filepath.Join(currentDirectory, "bin", "tracing")
-
-	// Ensure the directory exists
-	err = os.MkdirAll(tracingDir, os.ModePerm)
-	logger.Error(err, fmt.Sprintf("Failed to create tracing directory: %s", tracingDir))
-
-	// Return the full path for the log file
-	return filepath.Join(tracingDir, fmt.Sprintf("strace_log_%d%s.log", pid, suffix))
 }

@@ -12,19 +12,8 @@ import (
 
 // SaveAsYAML saves the ProcessInfo object to a YAML file
 func (info *ProcessInfo) SaveAsYAML() {
-	// Get the current working directory
-	currentDirectory, err := os.Getwd()
-	logger.Error(err, "Failed to get current directory")
-
-	// Create the target directory path
-	targetDir := filepath.Join(currentDirectory, "bin", "process_info")
-
-	// Ensure the directory exists
-	err = os.MkdirAll(targetDir, os.ModePerm)
-	logger.Error(err, fmt.Sprintf("Failed to create directory: %s", targetDir))
-
-	// Create the file path
-	filePath := filepath.Join(targetDir, fmt.Sprintf("%d_process_info.yaml", info.PID))
+	// Get the file path for the YAML file
+	filePath := BuildFilePath("bin/process_info", fmt.Sprintf("%d_process_info.yaml", info.PID))
 
 	// Create or overwrite the specified file
 	file, err := os.Create(filePath)
@@ -50,4 +39,20 @@ func LoadFromYAML(path string) *ProcessInfo {
 	logger.Error(err, "Failed to unmarshal YAML data")
 
 	return info
+}
+
+// BuildFilePath constructs a full file path from a subdirectory and file name
+func BuildFilePath(subDir, fileName string) string {
+	currentDirectory, err := os.Getwd()
+	logger.Error(err, "Failed to get current directory")
+
+	// Build the full path to the desired subdirectory
+	fullDir := filepath.Join(currentDirectory, subDir)
+
+	// Ensure the directory exists
+	err = os.MkdirAll(fullDir, os.ModePerm)
+	logger.Error(err, fmt.Sprintf("Failed to create tracing directory: %s", fullDir))
+
+	// Construct the full file path
+	return filepath.Join(fullDir, fileName)
 }
