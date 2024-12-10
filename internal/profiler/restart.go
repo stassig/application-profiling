@@ -1,8 +1,8 @@
-// TO DO: Change output files for logs and mapping!
 // TO DO: Proper mapping for cmdline arguments
 // TO DO: Solve /usr/lib/mysql/plugin/ → /usr/lib/mysql/plugin/auth_socket.so (if parent directory exists in the list -> skip?)
 // TO DO: Add rules for /etc/nginx, /var/lib/mysql
 // TO DO: User groups, permissions, etc.
+// TO DO: Move filter call to main
 
 // --- BACKLOG ---
 
@@ -93,5 +93,14 @@ func prepareStraceCommand(info *ProcessInfo, logfilePath string) *exec.Cmd {
 func getLogFilePath(pid int, suffix string) string {
 	currentDirectory, err := os.Getwd()
 	logger.Error(err, "Failed to get current directory")
-	return filepath.Join(currentDirectory, fmt.Sprintf("strace_log_%d%s.log", pid, suffix))
+
+	// Append the desired subdirectory to the current directory
+	tracingDir := filepath.Join(currentDirectory, "bin", "tracing")
+
+	// Ensure the directory exists
+	err = os.MkdirAll(tracingDir, os.ModePerm)
+	logger.Error(err, fmt.Sprintf("Failed to create tracing directory: %s", tracingDir))
+
+	// Return the full path for the log file
+	return filepath.Join(tracingDir, fmt.Sprintf("strace_log_%d%s.log", pid, suffix))
 }
