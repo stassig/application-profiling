@@ -145,41 +145,32 @@ func hasExcludedPrefix(path string) bool {
 	return false
 }
 
-// collapseApplicationSpecificDirs collapses application-specific directories
+// collapseApplicationSpecificDirs reduces file paths by identifying the shortest
+// application-specific directory that is not system-generic or excluded.
+// Example: For "/etc/nginx/conf.d", it checks:
+//   - "/etc" (generic)
+//   - "/etc/nginx" (application-specific)
+//
+// If "/etc/nginx" is valid, all subpaths collapse to it.
 func collapseApplicationSpecificDirs(filePaths []string) []string {
-
 	collapsed := make([]string, 0, len(filePaths))
 
 	for _, path := range filePaths {
-		// Split the path into components
+		// Split path into components
 		parts := strings.Split(strings.TrimPrefix(path, "/"), "/")
 		if len(parts) <= 1 {
-			// Nothing to collapse if it's just "/etc" or "/usr"
+			// Keep short paths like "/etc" or "/usr" as-is
 			collapsed = append(collapsed, path)
 			continue
 		}
 
-		// Attempt to find the shortest prefix that is not generic.
-		// We'll walk down the path components until we hit a directory
-		// that isn't listed in GenericPaths.
-		//
-		// For example: /etc/nginx/conf.d
-		//   - Check "/etc" (generic)
-		//   - Next "/etc/nginx" (not generic?), if not generic and not excluded:
-		//       we consider this an application-specific directory.
-		//
-		// If "/etc/nginx" is determined to be application-specific,
-		// we collapse everything under it to "/etc/nginx".
-
+		// Find the first non-generic, non-excluded directory
 		candidate := "/"
-		collapsedPath := path // default to original if we can't collapse
+		collapsedPath := path // Default to original if no collapse possible
 		for i := 0; i < len(parts); i++ {
 			candidate = filepath.Join(candidate, parts[i])
-			// Once we pass the first component (the generic directory),
-			// check if candidate is still generic or excluded.
 			if i > 0 && !isGenericOrExcluded(candidate) {
-				// We've found a directory that is not in GenericPaths and not excluded,
-				// so treat it as the top-level application-specific directory.
+				// Use this directory as the top-level application-specific path
 				collapsedPath = candidate
 				break
 			}
@@ -188,16 +179,16 @@ func collapseApplicationSpecificDirs(filePaths []string) []string {
 		collapsed = append(collapsed, collapsedPath)
 	}
 
-	// Deduplicate after collapsing
+	// Deduplicate and sort results
 	seen := make(map[string]bool)
 	finalPaths := []string{}
-	for _, p := range collapsed {
-		if !seen[p] {
-			seen[p] = true
-			finalPaths = append(finalPaths, p)
+	for _, path := range collapsed {
+		if !seen[path] {
+			seen[path] = true
+			finalPaths = append(finalPaths, path)
 		}
 	}
 
-	sort.Strings(finalPaths) // Ensure sorted order
+	sort.Strings(finalPaths)
 	return finalPaths
 }
