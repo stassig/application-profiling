@@ -17,7 +17,7 @@ func writeBlock(builder *strings.Builder, comment, content string) {
 	fmt.Fprintln(builder) // Add a blank line for spacing
 }
 
-// GenerateDockerfile generates a Dockerfile based on process information.
+// GenerateDockerfile generates a Dockerfile based on process information
 func GenerateDockerfile(info *profiler.ProcessInfo, dockerfilePath, tarFile string) error {
 	dockerfile := &strings.Builder{}
 
@@ -60,14 +60,19 @@ func GenerateDockerfile(info *profiler.ProcessInfo, dockerfilePath, tarFile stri
 	}
 
 	// Add CMD
-	cmdArgs := strings.Fields(info.ReconstructedCommand)
-	if len(cmdArgs) > 0 {
-		quoted := make([]string, len(cmdArgs))
-		for i, c := range cmdArgs {
-			quoted[i] = fmt.Sprintf("\"%s\"", c)
+	var cmdComponents []string
+
+	// Add the executable path as the first argument
+	cmdComponents = append(cmdComponents, fmt.Sprintf("\"%s\"", info.ExecutablePath))
+
+	// Add the command-line arguments
+	for _, argument := range info.CommandLineArguments {
+		cmdComponents = append(cmdComponents, fmt.Sprintf("\"%s\"", argument.Flag))
+		if argument.Value != "" {
+			cmdComponents = append(cmdComponents, fmt.Sprintf("\"%s\"", argument.Value))
 		}
-		writeBlock(dockerfile, "Entry point", fmt.Sprintf("CMD [%s]", strings.Join(quoted, ", ")))
 	}
+	writeBlock(dockerfile, "Entry point", fmt.Sprintf("CMD [%s]", strings.Join(cmdComponents, ", ")))
 
 	return os.WriteFile(dockerfilePath, []byte(dockerfile.String()), 0644)
 }

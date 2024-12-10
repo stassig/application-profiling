@@ -1,15 +1,8 @@
-pid: 99261
+pid: 175201
 executablepath: /usr/sbin/nginx
-commandlineargs:
-  - "nginx:"
-  - master
-  - process
-  - /usr/sbin/nginx
-  - -g
-  - daemon
-  - on;
-  - master_process
-  - on;
+commandlinearguments:
+  - flag: -g
+    value: daemon on; master_process on;
 workingdirectory: /
 environmentvariables: []
 processowner: root

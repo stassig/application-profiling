@@ -9,8 +9,7 @@ import (
 
 // ParseCommandLine reconstructs the command string from the executable path and cmdline data.
 // It follows the steps of cleaning, splitting, and reformatting arguments as needed.
-func ParseCommandLine(executablePath string, commandLineArguments []string) string {
-
+func ParseCommandLine(executablePath string, commandLineArguments []string) (string, []FlagArgument) {
 	// Step 1: Remove any arguments before the executable path
 	filteredArguments := filterArgumentsBeforeExecutable(commandLineArguments, executablePath)
 
@@ -23,7 +22,8 @@ func ParseCommandLine(executablePath string, commandLineArguments []string) stri
 	// Step 4: Construct the final command string
 	finalCommand := buildCommandString(executablePath, quotedArguments)
 
-	return finalCommand
+	// Return the reconstructed command and the parsed flags/arguments
+	return finalCommand, flagsAndArguments
 }
 
 // filterArgumentsBeforeExecutable removes any arguments that occur before the executable path.
@@ -36,10 +36,9 @@ func filterArgumentsBeforeExecutable(arguments []string, executablePath string) 
 	return arguments
 }
 
-// extractFlagsAndArguments parses the arguments into a slice of flags and their corresponding values.
-func extractFlagsAndArguments(arguments []string) [][2]string {
-	fmt.Printf("Arguments: %v\n", arguments)
-	var flagsWithArguments [][2]string
+// extractFlagsAndArguments parses the arguments into a slice of FlagArgument structs
+func extractFlagsAndArguments(arguments []string) []FlagArgument {
+	var flagsWithArguments []FlagArgument
 
 	isFlag := func(argument string) bool {
 		return strings.HasPrefix(argument, "-")
@@ -59,31 +58,29 @@ func extractFlagsAndArguments(arguments []string) [][2]string {
 			}
 
 			// Combine collected arguments into a single string
-			flagArguments := strings.Join(collectedArguments, " ")
-			flagsWithArguments = append(flagsWithArguments, [2]string{flag, flagArguments})
+			flagValue := strings.Join(collectedArguments, " ")
+			flagsWithArguments = append(flagsWithArguments, FlagArgument{Flag: flag, Value: flagValue})
 		} else {
-			// Handle standalone arguments (if any, though rare in this case)
-			flagsWithArguments = append(flagsWithArguments, [2]string{arguments[i], ""})
+			// Handle standalone arguments (e.g., positional arguments)
+			flagsWithArguments = append(flagsWithArguments, FlagArgument{Flag: arguments[i], Value: ""})
 			i++
 		}
 	}
-	fmt.Printf("Flags with arguments: %v\n", flagsWithArguments)
 	return flagsWithArguments
 }
 
-// quoteSpecialArguments wraps arguments containing special characters or spaces in quotes.
-func quoteSpecialArguments(flagsAndArguments [][2]string) []string {
+// quoteSpecialArguments wraps arguments containing special characters or spaces in quotes
+func quoteSpecialArguments(flagsAndArguments []FlagArgument) []string {
 	var specialCharacterPattern = regexp.MustCompile(`[^\w@%+=:,./-]`)
 	var quotedArguments []string
 
-	for _, pair := range flagsAndArguments {
-		flag, argument := pair[0], pair[1]
-		quotedArguments = append(quotedArguments, flag)
-		if argument != "" {
-			if specialCharacterPattern.MatchString(argument) {
-				argument = fmt.Sprintf(`"%s"`, argument)
+	for _, argument := range flagsAndArguments {
+		quotedArguments = append(quotedArguments, argument.Flag)
+		if argument.Value != "" {
+			if specialCharacterPattern.MatchString(argument.Value) {
+				argument.Value = fmt.Sprintf("\"%s\"", argument.Value)
 			}
-			quotedArguments = append(quotedArguments, argument)
+			quotedArguments = append(quotedArguments, argument.Value)
 		}
 	}
 	return quotedArguments

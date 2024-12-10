@@ -14,16 +14,22 @@ import (
 
 // ProcessInfo represents the process metadata.
 type ProcessInfo struct {
-	PID                  int      `yaml:"pid"`
-	ExecutablePath       string   `yaml:"executablepath"`
-	CommandLineArgs      []string `yaml:"commandlineargs"`
-	WorkingDirectory     string   `yaml:"workingdirectory"`
-	EnvironmentVariables []string `yaml:"environmentvariables"`
-	ProcessOwner         string   `yaml:"processowner"`
-	ReconstructedCommand string   `yaml:"reconstructedcommand"`
-	UnixSockets          []string `yaml:"unixsockets"`
-	ListeningTCP         []int    `yaml:"listeningtcp"`
-	ListeningUDP         []int    `yaml:"listeningudp"`
+	PID                  int            `yaml:"pid"`
+	ExecutablePath       string         `yaml:"executablepath"`
+	CommandLineArguments []FlagArgument `yaml:"commandlinearguments"`
+	WorkingDirectory     string         `yaml:"workingdirectory"`
+	EnvironmentVariables []string       `yaml:"environmentvariables"`
+	ProcessOwner         string         `yaml:"processowner"`
+	ReconstructedCommand string         `yaml:"reconstructedcommand"`
+	UnixSockets          []string       `yaml:"unixsockets"`
+	ListeningTCP         []int          `yaml:"listeningtcp"`
+	ListeningUDP         []int          `yaml:"listeningudp"`
+}
+
+// FlagArgument represents a cmdline flag and its associated value.
+type FlagArgument struct {
+	Flag  string // e.g., "-g"
+	Value string // e.g., "daemon on;"
 }
 
 // GetProcessInfo retrieves key information about a process by its Process ID (PID)
@@ -37,15 +43,15 @@ func GetProcessInfo(processID int) *ProcessInfo {
 	inodeSet := GetProcessInodeSet(processID)
 
 	// Get the process information
+	rawCommandLineArguments := GetCommandLineArgs(processID)
 	info.ExecutablePath = GetExecutablePath(processID)
-	info.CommandLineArgs = GetCommandLineArgs(processID)
 	info.WorkingDirectory = GetWorkingDirectory(processID)
 	info.EnvironmentVariables = GetEnvironmentVariables(processID)
 	info.ProcessOwner = GetProcessOwner(processID)
 	info.UnixSockets = GetUnixDomainSockets(inodeSet)
 	info.ListeningTCP = GetListeningTCPPorts(inodeSet)
 	info.ListeningUDP = GetListeningUDPPorts(inodeSet)
-	info.ReconstructedCommand = ParseCommandLine(info.ExecutablePath, info.CommandLineArgs)
+	info.ReconstructedCommand, info.CommandLineArguments = ParseCommandLine(info.ExecutablePath, rawCommandLineArguments)
 
 	return info
 }
@@ -54,7 +60,7 @@ func GetProcessInfo(processID int) *ProcessInfo {
 func (info *ProcessInfo) LogProcessDetails() {
 	log.Printf("[DEBUG] Process ID: %d", info.PID)
 	log.Printf("[DEBUG] Executable path: %s", info.ExecutablePath)
-	log.Printf("[DEBUG] Command-line arguments: %s", info.CommandLineArgs)
+	log.Printf("[DEBUG] Command-line arguments: %s", info.CommandLineArguments)
 	log.Printf("[DEBUG] Working directory: %s", info.WorkingDirectory)
 	log.Printf("[DEBUG] Environment variables: %v", info.EnvironmentVariables)
 	log.Printf("[DEBUG] Process owner: %s", info.ProcessOwner)

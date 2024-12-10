@@ -1,10 +1,8 @@
-// TO DO: Proper mapping for cmdline arguments
-// ТО DO: Indentation for Dockerfile
+// TO DO: Add user in cmdparser
 // TO DO: Refactor dockerize action
 
 // --- BACKLOG ---
 
-// TO DO: Add user in cmdparser
 // TO DO: Integrate /etc/os-release info for accurate base image
 // TO DO: More elegant solution than sleep for strace
 // TO DO: Clean up: interfacing; PortInfo struct?
