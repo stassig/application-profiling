@@ -4,10 +4,15 @@ commandlinearguments:
   - flag: -g
     value: daemon on; master_process on;
 workingdirectory: /
-environmentvariables: []
+environmentvariables:
+  - PG_OOM_ADJUST_FILE=/proc/self/oom_score_adj
+  - LANG=C.UTF-8
+  - PWD=/
+  - PGDATA=/var/lib/postgresql/16/main
 processowner: root
 reconstructedcommand: /usr/sbin/nginx -g "daemon on; master_process on;"
 unixsockets: []
 listeningtcp:
   - 80
-listeningudp: []
+listeningudp:
+  - 53

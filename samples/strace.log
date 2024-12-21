@@ -18,3 +18,5 @@
 /usr/lib/x86_64-linux-gnu/gconv
 /var/lib/nginx
 /var/log/nginx
+/usr/sbin/nginx
+/var/www/html/index.nginx-debian.html

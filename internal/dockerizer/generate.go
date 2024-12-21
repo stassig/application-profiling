@@ -81,7 +81,7 @@ func buildOwnerAndGroup(processOwner string) string {
 	return processOwner
 }
 
-// buildCommandLine constructs the CMD array portion from the executable path
+// buildCommandLine constructs the CMD array from the executable path
 // and the associated command-line arguments. It produces something like:
 // ["/usr/sbin/nginx", "-g", "daemon on; master_process on;"]
 func buildCommandLine(processInformation *profiler.ProcessInfo) string {
