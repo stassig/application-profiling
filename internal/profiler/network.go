@@ -1,15 +1,15 @@
 package profiler
 
 import (
-	"application_profiling/internal/util/logger"
 	"bufio"
 	"fmt"
-	"log"
 	"os"
 	"os/user"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/charmbracelet/log"
 )
 
 // GetProcessInodeSet retrieves a set of socket inodes used by the specified process and its children
@@ -45,28 +45,38 @@ func EnsureSocketDirectories(sockets []string, username string) {
 
 	for _, socketPath := range sockets {
 		dirPath := filepath.Dir(socketPath)
-		log.Printf("[DEBUG] Ensuring directory for socket: %s", dirPath)
+		log.Debug(fmt.Sprintf("Ensuring directory for socket: %s", dirPath))
 
 		// Create directory if it doesn't exist
 		err := os.MkdirAll(dirPath, 0755)
-		logger.Error(err, fmt.Sprintf("Failed to create directory %s", dirPath))
+		if err != nil {
+			log.Error("Failed to create directory", "directory", dirPath, "error", err)
+		}
 
 		// Change ownership of the directory
 		err = os.Chown(dirPath, uid, gid)
-		logger.Error(err, fmt.Sprintf("Failed to change ownership of directory %s", dirPath))
+		if err != nil {
+			log.Error("Failed to change ownership of directory", "directory", dirPath, "error", err)
+		}
 	}
 }
 
 // getUIDGID retrieves the UID and GID for a given username.
 func getUIDGID(username string) (int, int) {
 	usr, err := user.Lookup(username)
-	logger.Error(err, fmt.Sprintf("Failed to look up user %s", username))
+	if err != nil {
+		log.Error("Failed to look up user", "error", err)
+	}
 
 	uid, err := strconv.Atoi(usr.Uid)
-	logger.Error(err, fmt.Sprintf("Failed to convert UID %s", usr.Uid))
+	if err != nil {
+		log.Error(fmt.Sprintf("Failed to convert UID %s", usr.Uid), "error", err)
+	}
 
 	gid, err := strconv.Atoi(usr.Gid)
-	logger.Error(err, fmt.Sprintf("Failed to convert GID %s", usr.Gid))
+	if err != nil {
+		log.Error(fmt.Sprintf("Failed to convert GID %s", usr.Gid), "error", err)
+	}
 
 	return uid, gid
 }
@@ -79,7 +89,7 @@ func getProcessSocketInodes(processIDs []int) map[string]struct{} {
 		fdPath := fmt.Sprintf("/proc/%d/fd", pid)
 		fds, err := os.ReadDir(fdPath)
 		if err != nil {
-			logger.Error(err, fmt.Sprintf("Reading file descriptors for PID %d", pid))
+			log.Error(fmt.Sprintf("Reading file descriptors for PID %d", pid), "error", err)
 			continue
 		}
 
@@ -87,7 +97,7 @@ func getProcessSocketInodes(processIDs []int) map[string]struct{} {
 			fdFullPath := filepath.Join(fdPath, fd.Name())
 			linkTarget, err := os.Readlink(fdFullPath)
 			if err != nil {
-				logger.Error(err, fmt.Sprintf("Reading link for fd %s", fdFullPath))
+				log.Error(fmt.Sprintf("Reading link for fd %s", fdFullPath), "error", err)
 				continue
 			}
 
@@ -107,7 +117,9 @@ func getProcessSocketInodes(processIDs []int) map[string]struct{} {
 func mapInodesToPaths(inodeSet map[string]struct{}) []string {
 	var socketPaths []string
 	inodeToPath, err := parseProcNetUnix()
-	logger.Error(err, "Parsing /proc/net/unix")
+	if err != nil {
+		log.Error("Failed to parse /proc/net/unix", "error", err)
+	}
 
 	for inode := range inodeSet {
 		if path, exists := inodeToPath[inode]; exists && path != "" {
@@ -156,7 +168,9 @@ func parseProcNetUnix() (map[string]string, error) {
 // parseListeningPortsFromNet parses a /proc/net/* file for sockets in LISTEN state
 func parseListeningPortsFromNet(inodeSet map[string]struct{}, netFilePath string) []int {
 	file, err := os.Open(netFilePath)
-	logger.Error(err, fmt.Sprintf("Failed to open %s", netFilePath))
+	if err != nil {
+		log.Error(fmt.Sprintf("Failed to open %s", netFilePath), "error", err)
+	}
 	defer file.Close()
 
 	var listeningPorts []int

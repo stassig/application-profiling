@@ -1,4 +1,3 @@
-// TO DO: Refactor filesystem logic
 // TO DO: Add executable to tar archive
 // TO DO: Integrate /etc/os-release info for accurate base image
 // TO DO: Add user groups based on process owner
@@ -20,7 +19,7 @@ import (
 	"strconv"
 	"time"
 
-	"application_profiling/internal/util/logger"
+	"github.com/charmbracelet/log"
 )
 
 // RestartProcess handles restarting a process using its ProcessInfo
@@ -32,9 +31,11 @@ func RestartProcess(processInfo *ProcessInfo) {
 
 // terminateProcess stops the process with the given PID
 func terminateProcess(processID int) {
-	logger.Info(fmt.Sprintf("Terminating process with PID %d", processID))
+	log.Info(fmt.Sprintf("Terminating process with PID %d", processID))
 	err := exec.Command("sudo", "kill", strconv.Itoa(processID)).Run()
-	logger.Error(err, fmt.Sprintf("Failed to terminate process with PID %d", processID))
+	if err != nil {
+		log.Error("Failed to terminate process", "error", err)
+	}
 	// Sleep for a few seconds to allow the process to terminate
 	time.Sleep(5 * time.Second)
 }
@@ -53,16 +54,20 @@ func startProcessWithStrace(info *ProcessInfo) {
 	cmd.Stderr = &stderrBuffer
 
 	// Start the process with strace
-	logger.Info(fmt.Sprintf("Starting process with strace: %s", info.ReconstructedCommand))
+	log.Info(fmt.Sprintf("Starting process with strace: %s", info.ReconstructedCommand))
 	err := cmd.Start()
-	logger.Error(err, fmt.Sprintf("Failed to start process: %s", stderrBuffer.String()))
+	if err != nil {
+		log.Error("Failed to start process with strace", "stderr", stderrBuffer.String(), "error", err)
+	}
 
 	// Sleep for a few seconds to allow strace to capture initial syscalls
 	time.Sleep(5 * time.Second)
 
 	// Terminate the strace process after data collection
 	err = cmd.Process.Kill()
-	logger.Error(err, fmt.Sprintf("Failed to kill strace process"))
+	if err != nil {
+		log.Error("Failed to kill strace process", "error", err)
+	}
 }
 
 // prepareStraceCommand constructs the strace command to execute

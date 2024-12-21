@@ -4,10 +4,11 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/charmbracelet/log"
 )
 
 var visitedFiles = make(map[string]bool)
@@ -29,7 +30,7 @@ func LoadFilePaths(traceLogPath string) ([]string, error) {
 func CopyFilesToProfile(filePaths []string, profileDirectory string) error {
 	for _, filePath := range filePaths {
 		if err := copyFileRecursively(filePath, profileDirectory); err != nil {
-			log.Printf("Warning: Failed to copy %s: %v", filePath, err)
+			log.Warnf("Failed to copy %s: %v", filePath, err)
 		}
 	}
 	return nil
@@ -81,7 +82,7 @@ func copySymlink(sourcePath, destinationPath, profileDirectory string) error {
 
 	// Recursively copy the symlink target.
 	if err := copyFileRecursively(linkTarget, profileDirectory); err != nil {
-		log.Printf("Warning: Failed to copy symlink target %s: %v", linkTarget, err)
+		log.Warnf("Failed to copy symlink target %s: %v", linkTarget, err)
 	}
 
 	// Ensure the parent folder exists before making a symlink.
@@ -108,7 +109,7 @@ func copyDirectory(sourcePath, destinationPath, profileDirectory string) error {
 	for _, directoryEntry := range directoryEntries {
 		entryPath := filepath.Join(sourcePath, directoryEntry.Name())
 		if err := copyFileRecursively(entryPath, profileDirectory); err != nil {
-			log.Printf("Warning: Failed to copy entry %s: %v", entryPath, err)
+			log.Warnf("Failed to copy entry %s: %v", entryPath, err)
 		}
 	}
 

@@ -2,14 +2,13 @@ package profiler
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"os/user"
 	"strconv"
 	"strings"
 
-	"application_profiling/internal/util/logger"
+	"github.com/charmbracelet/log"
 )
 
 // ProcessInfo represents the process metadata.
@@ -58,16 +57,16 @@ func GetProcessInfo(processID int) *ProcessInfo {
 
 // LogProcessDetails logs key details about a process in one method.
 func (info *ProcessInfo) LogProcessDetails() {
-	log.Printf("[DEBUG] Process ID: %d", info.PID)
-	log.Printf("[DEBUG] Executable path: %s", info.ExecutablePath)
-	log.Printf("[DEBUG] Command-line arguments: %s", info.CommandLineArguments)
-	log.Printf("[DEBUG] Working directory: %s", info.WorkingDirectory)
-	log.Printf("[DEBUG] Environment variables: %v", info.EnvironmentVariables)
-	log.Printf("[DEBUG] Process owner: %s", info.ProcessOwner)
-	log.Printf("[DEBUG] Reconstructed command: %s", info.ReconstructedCommand)
-	log.Printf("[DEBUG] Sockets: %v", info.UnixSockets)
-	log.Printf("[DEBUG] Listening TCP ports: %v", info.ListeningTCP)
-	log.Printf("[DEBUG] Listening UDP ports: %v", info.ListeningUDP)
+	log.Infof("Process ID: %d", info.PID)
+	log.Infof("Executable path: %s", info.ExecutablePath)
+	log.Infof("Command-line arguments: %s", info.CommandLineArguments)
+	log.Infof("Working directory: %s", info.WorkingDirectory)
+	log.Infof("Environment variables: %v", info.EnvironmentVariables)
+	log.Infof("Process owner: %s", info.ProcessOwner)
+	log.Infof("Reconstructed command: %s", info.ReconstructedCommand)
+	log.Infof("Sockets: %v", info.UnixSockets)
+	log.Infof("Listening TCP ports: %v", info.ListeningTCP)
+	log.Infof("Listening UDP ports: %v", info.ListeningUDP)
 }
 
 // GetExecutablePath retrieves the path to the executable of the process
@@ -75,7 +74,9 @@ func GetExecutablePath(processID int) string {
 	// Read the symbolic link to the executable from /proc/<PID>/exe
 	executablePath := fmt.Sprintf("/proc/%d/exe", processID)
 	resolvedPath, err := os.Readlink(executablePath)
-	logger.Error(err, "Reading process executable path")
+	if err != nil {
+		log.Error("Failed to read process executable path", "error", err)
+	}
 	return resolvedPath
 }
 
@@ -84,8 +85,9 @@ func GetCommandLineArgs(processID int) []string {
 	// Read the command-line arguments from /proc/<PID>/cmdline
 	commandLinePath := fmt.Sprintf("/proc/%d/cmdline", processID)
 	commandLineData, err := os.ReadFile(commandLinePath)
-	logger.Error(err, "Reading process command-line arguments")
-
+	if err != nil {
+		log.Error("Failed to read process command-line arguments", "error", err)
+	}
 	// Replace null bytes with spaces and split the string into fields
 	commandLineArgs := strings.Fields(strings.ReplaceAll(string(commandLineData), "\x00", " "))
 	return commandLineArgs
@@ -96,7 +98,9 @@ func GetWorkingDirectory(processID int) string {
 	// Read the symbolic link to the working directory from /proc/<PID>/cwd
 	workingDirectoryPath := fmt.Sprintf("/proc/%d/cwd", processID)
 	workingDirectory, err := os.Readlink(workingDirectoryPath)
-	logger.Error(err, "Reading process working directory")
+	if err != nil {
+		log.Error("Failed to read process working directory", "error", err)
+	}
 	return workingDirectory
 }
 
@@ -105,7 +109,9 @@ func GetEnvironmentVariables(processID int) []string {
 	// Read the environment variables from /proc/<PID>/environ
 	environmentFilePath := fmt.Sprintf("/proc/%d/environ", processID)
 	rawEnvironmentData, err := os.ReadFile(environmentFilePath)
-	logger.Error(err, "Reading process environment variables")
+	if err != nil {
+		log.Error("Failed to read process environment variables", "error", err)
+	}
 	return parseEnvironmentVariables(rawEnvironmentData)
 }
 
@@ -114,7 +120,9 @@ func GetProcessOwner(processID int) string {
 	// Read the status file to get the UID of the process
 	statusFilePath := fmt.Sprintf("/proc/%d/status", processID)
 	rawStatusData, err := os.ReadFile(statusFilePath)
-	logger.Error(err, "Reading process status file")
+	if err != nil {
+		log.Error("Failed to read process status file", "error", err)
+	}
 
 	var userID string
 	statusLines := strings.Split(string(rawStatusData), "\n")
@@ -129,7 +137,9 @@ func GetProcessOwner(processID int) string {
 	}
 
 	userInfo, err := user.LookupId(userID)
-	logger.Error(err, fmt.Sprintf("Looking up user by UID (%s)", userID))
+	if err != nil {
+		log.Error(fmt.Sprintf("Failed to look up user by UID (%s)", userID), "error", err)
+	}
 	return userInfo.Username
 }
 
@@ -138,7 +148,7 @@ func GetChildProcessIDs(parentPID int) []int {
 	// Execute pgrep -P <parentPID>
 	output, err := exec.Command("pgrep", "-P", strconv.Itoa(parentPID)).Output()
 	if err != nil {
-		logger.Warning("No child processes found or failed to retrieve child processes for parent PID: " + strconv.Itoa(parentPID))
+		log.Warn("No child processes found or failed to retrieve child processes for parent PID: " + strconv.Itoa(parentPID))
 		return []int{} // Return an empty slice if there are no child processes
 	}
 
@@ -150,7 +160,9 @@ func GetChildProcessIDs(parentPID int) []int {
 			continue
 		}
 		pid, err := strconv.Atoi(line)
-		logger.Error(err, "Failed to convert PID to integer: "+line)
+		if err != nil {
+			log.Error("Failed to convert PID to integer: "+line, "error", err)
+		}
 		childProcessIDs = append(childProcessIDs, pid)
 	}
 	return childProcessIDs
@@ -160,10 +172,14 @@ func GetChildProcessIDs(parentPID int) []int {
 func GetProcessIDbyExecutable(executablePath string) int {
 	// Execute pgrep -f <executablePath>
 	output, err := exec.Command("pgrep", "-f", executablePath).Output()
-	logger.Error(err, "Failed to retrieve PID for executable: "+executablePath)
+	if err != nil {
+		log.Error("Failed to retrieve PID for executable: "+executablePath, "error", err)
+	}
 
 	pid, err := strconv.Atoi(strings.TrimSpace(string(output)))
-	logger.Error(err, "Failed to convert PID to integer for executable: "+executablePath)
+	if err != nil {
+		log.Error("Failed to convert PID to integer for executable: "+executablePath, "error", err)
+	}
 
 	return pid
 }

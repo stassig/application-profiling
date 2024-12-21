@@ -2,12 +2,13 @@ package subcommands
 
 import (
 	"flag"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
 
 	"application_profiling/internal/profiler"
+
+	"github.com/charmbracelet/log"
 )
 
 func RunProfile(args []string) {
@@ -53,6 +54,6 @@ func getProcessID(args []string, useExecutable bool) int {
 	if err != nil {
 		log.Fatalf("[ERROR] Invalid Process ID (PID): %v\n", err)
 	}
-	log.Printf("[INFO] Using PID from arguments: %d\n", processID)
+	log.Info("Retrieved process ID from arguments", "PID", processID)
 	return processID
 }

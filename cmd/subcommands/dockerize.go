@@ -2,12 +2,13 @@ package subcommands
 
 import (
 	"flag"
-	"log"
 	"os"
 	"path/filepath"
 
 	"application_profiling/internal/dockerizer"
 	"application_profiling/internal/profiler"
+
+	"github.com/charmbracelet/log"
 )
 
 func RunDockerize(args []string) {
@@ -46,5 +47,5 @@ func RunDockerize(args []string) {
 		log.Fatalf("Failed to generate Dockerfile: %v", err)
 	}
 
-	log.Println("Done.")
+	log.Printf("Done.")
 }

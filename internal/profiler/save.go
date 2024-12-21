@@ -5,8 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"application_profiling/internal/util/logger"
-
+	"github.com/charmbracelet/log"
 	"gopkg.in/yaml.v2"
 )
 
@@ -17,26 +16,36 @@ func (info *ProcessInfo) SaveAsYAML() {
 
 	// Create or overwrite the specified file
 	file, err := os.Create(filePath)
-	logger.Error(err, fmt.Sprintf("Failed to create YAML file: %s", filePath))
+	if err != nil {
+		log.Error("Failed to create YAML file", "filePath", filePath, "error", err)
+	}
 	defer file.Close()
 
 	// Marshal the ProcessInfo object to YAML
 	data, err := yaml.Marshal(info)
-	logger.Error(err, "Failed to marshal ProcessInfo to YAML")
+	if err != nil {
+		log.Error("Failed to marshal ProcessInfo to YAML", "error", err)
+	}
 
 	// Write the YAML data to the file
 	_, err = file.Write(data)
-	logger.Error(err, fmt.Sprintf("Failed to write YAML data to file: %s", filePath))
+	if err != nil {
+		log.Error("Failed to write YAML data to file", "filePath", filePath, "error", err)
+	}
 }
 
 // LoadFromYAML loads process info from a YAML file.
 func LoadFromYAML(path string) *ProcessInfo {
 	data, err := os.ReadFile(path)
-	logger.Error(err, fmt.Sprintf("Failed to read file: %s", path))
+	if err != nil {
+		log.Error("Failed to read file", "path", path, "error", err)
+	}
 
 	info := &ProcessInfo{}
 	err = yaml.Unmarshal(data, info)
-	logger.Error(err, "Failed to unmarshal YAML data")
+	if err != nil {
+		log.Error("Failed to unmarshal YAML data", "error", err)
+	}
 
 	return info
 }
@@ -44,14 +53,18 @@ func LoadFromYAML(path string) *ProcessInfo {
 // BuildFilePath constructs a full file path from a subdirectory and file name
 func BuildFilePath(subDir, fileName string) string {
 	currentDirectory, err := os.Getwd()
-	logger.Error(err, "Failed to get current directory")
+	if err != nil {
+		log.Error("Failed to get current directory", "error", err)
+	}
 
 	// Build the full path to the desired subdirectory
 	fullDir := filepath.Join(currentDirectory, subDir)
 
 	// Ensure the directory exists
 	err = os.MkdirAll(fullDir, os.ModePerm)
-	logger.Error(err, fmt.Sprintf("Failed to create tracing directory: %s", fullDir))
+	if err != nil {
+		log.Error("Failed to create tracing directory", "directory", fullDir, "error", err)
+	}
 
 	// Construct the full file path
 	return filepath.Join(fullDir, fileName)

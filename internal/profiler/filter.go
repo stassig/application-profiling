@@ -1,7 +1,6 @@
 package profiler
 
 import (
-	"application_profiling/internal/util/logger"
 	"bufio"
 	"errors"
 	"fmt"
@@ -10,6 +9,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/charmbracelet/log"
 )
 
 var (
@@ -25,17 +26,23 @@ func FilterStraceLog(info *ProcessInfo) {
 
 	// Open input file
 	inputFile, err := os.Open(inputFilePath)
-	logger.Error(err, "Failed to open input file")
+	if err != nil {
+		log.Error("Failed to open input file", "error", err)
+	}
 	defer inputFile.Close()
 
 	// Open output file
 	outputFile, err := os.Create(outputFilePath)
-	logger.Error(err, "Failed to create output file")
+	if err != nil {
+		log.Error("Failed to create output file", "error", err)
+	}
 	defer outputFile.Close()
 
 	// Process the strace log
 	err = processStraceLog(inputFile, outputFile, info.WorkingDirectory)
-	logger.Error(err, "Failed to process strace log")
+	if err != nil {
+		log.Error("Failed to process strace log", "error", err)
+	}
 }
 
 // processStraceLog scans the input file, filters file paths, and writes them to the output file
@@ -93,7 +100,7 @@ func processStraceLog(inputFile *os.File, outputFile *os.File, initialWorkingDir
 func extractFilePath(line, currentWorkingDirectory string) (string, error) {
 	match := filePathRegex.FindStringSubmatch(line)
 	if match == nil {
-		return "", errors.New("No file path found")
+		return "", errors.New("no file path found")
 	}
 	filePath := match[1]
 
@@ -112,7 +119,7 @@ func updateWorkingDirectory(line, currentDir string) string {
 	}
 
 	matches := dirRegex.FindStringSubmatch(line)
-	if matches != nil && len(matches) > 1 {
+	if len(matches) > 1 {
 		return matches[1]
 	}
 	return currentDir
