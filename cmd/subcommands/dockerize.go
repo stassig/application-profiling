@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"application_profiling/internal/docker"
+	"application_profiling/internal/dockerizer"
 	"application_profiling/internal/profiler"
 )
 
@@ -23,7 +23,7 @@ func RunDockerize(args []string) {
 	info := profiler.LoadFromYAML(*processInfoPath)
 
 	// 2. Load file paths from trace log
-	files, err := docker.LoadFilePaths(*traceLogPath)
+	files, err := dockerizer.LoadFilePaths(*traceLogPath)
 	if err != nil {
 		log.Fatalf("Failed to load file paths: %v", err)
 	}
@@ -32,17 +32,17 @@ func RunDockerize(args []string) {
 	if err := os.RemoveAll(*profileDir); err != nil {
 		log.Fatalf("Failed to clean profile directory: %v", err)
 	}
-	if err := docker.CopyFilesToProfile(files, *profileDir); err != nil {
+	if err := dockerizer.CopyFilesToProfile(files, *profileDir); err != nil {
 		log.Fatalf("Failed to copy files to profile: %v", err)
 	}
 
 	// 4. Create tar archive from the profile directory
-	if err := docker.CreateTarArchive(*tarFile, *profileDir); err != nil {
+	if err := dockerizer.CreateTarArchive(*tarFile, *profileDir); err != nil {
 		log.Fatalf("Failed to create tar archive: %v", err)
 	}
 
 	// 5. Generate Dockerfile
-	if err := docker.GenerateDockerfile(info, *outputDockerfile, filepath.Base(*tarFile)); err != nil {
+	if err := dockerizer.GenerateDockerfile(info, *outputDockerfile, filepath.Base(*tarFile)); err != nil {
 		log.Fatalf("Failed to generate Dockerfile: %v", err)
 	}
 

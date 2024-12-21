@@ -1,12 +1,15 @@
-// TO DO: Add user in cmdparser
-// TO DO: Refactor dockerize action
+// TO DO: Refactor filesystem logic
+// TO DO: Add executable to tar archive
+// TO DO: Integrate /etc/os-release info for accurate base image
+// TO DO: Add user groups based on process owner
 
 // --- BACKLOG ---
 
-// TO DO: Integrate /etc/os-release info for accurate base image
-// TO DO: More elegant solution than sleep for strace
-// TO DO: Clean up: interfacing; PortInfo struct?
-// TO DO: User groups, permissions, etc.
+// TO DO: More elegant solution than sleep for strace - commandline option for time
+// TO DO: Inline error handling for better readability (charm bracelet log package)
+// TO DO: Clean up: interfacing;
+// TO DO: User groups, permissions (filter by user)
+// TO DO: Performance profile (CPU & RAM)
 
 package profiler
 
@@ -64,6 +67,9 @@ func startProcessWithStrace(info *ProcessInfo) {
 
 // prepareStraceCommand constructs the strace command to execute
 func prepareStraceCommand(info *ProcessInfo, logfilePath string) *exec.Cmd {
+	// Modify the reconstructed command to include sudo -u <process_owner>
+	// userPrefixedCommand := fmt.Sprintf("sudo -u %s %s", info.ProcessOwner, info.ReconstructedCommand)
+
 	// Prepare the strace command arguments
 	cmdArgs := []string{
 		"strace",
