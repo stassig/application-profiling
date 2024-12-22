@@ -39,14 +39,14 @@ func FilterStraceLog(info *ProcessInfo) {
 	defer outputFile.Close()
 
 	// Process the strace log
-	err = processStraceLog(inputFile, outputFile, info.WorkingDirectory)
+	err = processStraceLog(inputFile, outputFile, info.WorkingDirectory, info.ExecutablePath)
 	if err != nil {
 		log.Error("Failed to process strace log", "error", err)
 	}
 }
 
 // processStraceLog scans the input file, filters file paths, and writes them to the output file
-func processStraceLog(inputFile *os.File, outputFile *os.File, initialWorkingDirectory string) error {
+func processStraceLog(inputFile *os.File, outputFile *os.File, initialWorkingDirectory, executablePath string) error {
 	filePaths := []string{}
 	seenPaths := make(map[string]bool)
 	currentWorkingDirectory := initialWorkingDirectory
@@ -81,6 +81,12 @@ func processStraceLog(inputFile *os.File, outputFile *os.File, initialWorkingDir
 
 	if err := scanner.Err(); err != nil {
 		return err
+	}
+
+	// Ensure the executable path is included
+	if !seenPaths[executablePath] {
+		filePaths = append(filePaths, executablePath)
+		seenPaths[executablePath] = true
 	}
 
 	// Collapse application-specific directories
