@@ -1,11 +1,9 @@
-// TO DO: Integrate /etc/os-release info for accurate base image
 // TO DO: Working MySQL example
 
 // --- BACKLOG ---
 
 // TO DO: Clean up: interfacing?
 // TO DO: User groups, permissions (filter by user)
-// TO DO: Performance profile (CPU & RAM)
 
 package profiler
 

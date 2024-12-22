@@ -13,18 +13,20 @@ import (
 
 // ProcessInfo represents the process metadata.
 type ProcessInfo struct {
-	PID                  int            `yaml:"pid"`
-	ExecutablePath       string         `yaml:"executablepath"`
-	CommandLineArguments []FlagArgument `yaml:"commandlinearguments"`
-	WorkingDirectory     string         `yaml:"workingdirectory"`
-	EnvironmentVariables []string       `yaml:"environmentvariables"`
-	ProcessUser          string         `yaml:"processuser"`
-	ProcessGroup         string         `yaml:"processgroup"`
-	ReconstructedCommand string         `yaml:"reconstructedcommand"`
-	UnixSockets          []string       `yaml:"unixsockets"`
-	ListeningTCP         []int          `yaml:"listeningtcp"`
-	ListeningUDP         []int          `yaml:"listeningudp"`
-	OSImage              string         `yaml:"osimage"`
+	PID                  int                `yaml:"pid"`
+	ChildPIDs            []int              `yaml:"childpids"`
+	ExecutablePath       string             `yaml:"executablepath"`
+	CommandLineArguments []FlagArgument     `yaml:"commandlinearguments"`
+	WorkingDirectory     string             `yaml:"workingdirectory"`
+	EnvironmentVariables []string           `yaml:"environmentvariables"`
+	ProcessUser          string             `yaml:"processuser"`
+	ProcessGroup         string             `yaml:"processgroup"`
+	ReconstructedCommand string             `yaml:"reconstructedcommand"`
+	UnixSockets          []string           `yaml:"unixsockets"`
+	ListeningTCP         []int              `yaml:"listeningtcp"`
+	ListeningUDP         []int              `yaml:"listeningudp"`
+	OSImage              string             `yaml:"osimage"`
+	ResourceUsage        *ResourceUsageInfo `yaml:"usage"`
 }
 
 // FlagArgument represents a cmdline flag and its associated value.
@@ -45,6 +47,7 @@ func GetProcessInfo(processID int) *ProcessInfo {
 
 	// Get the process information
 	rawCommandLineArguments := GetCommandLineArgs(processID)
+	info.ChildPIDs = GetChildProcessIDs(processID)
 	info.ExecutablePath = GetExecutablePath(processID)
 	info.WorkingDirectory = GetWorkingDirectory(processID)
 	info.EnvironmentVariables = GetEnvironmentVariables(processID)
@@ -54,6 +57,7 @@ func GetProcessInfo(processID int) *ProcessInfo {
 	info.ListeningUDP = GetListeningUDPPorts(inodeSet)
 	info.ReconstructedCommand, info.CommandLineArguments = ParseCommandLine(info.ExecutablePath, rawCommandLineArguments)
 	info.OSImage = GetOSRelease()
+	info.ResourceUsage = GetTotalResourceUsage(processID, info.ChildPIDs)
 
 	return info
 }
@@ -63,7 +67,8 @@ func (info *ProcessInfo) LogProcessDetails() {
 	logger := log.New(os.Stderr)
 	logger.SetLevel(log.DebugLevel)
 
-	logger.Debugf("Process ID: %d", info.PID)
+	logger.Debugf("Parent Process ID: %d", info.PID)
+	logger.Debugf("Child process IDs: %v", info.ChildPIDs)
 	logger.Debugf("Executable path: %s", info.ExecutablePath)
 	logger.Debugf("Command-line arguments: %s", info.CommandLineArguments)
 	logger.Debugf("Working directory: %s", info.WorkingDirectory)
@@ -75,6 +80,7 @@ func (info *ProcessInfo) LogProcessDetails() {
 	logger.Debugf("Listening TCP ports: %v", info.ListeningTCP)
 	logger.Debugf("Listening UDP ports: %v", info.ListeningUDP)
 	logger.Debugf("OS Version: %s", info.OSImage)
+	logger.Debugf("Resource usage: CPU %.2f%%, Memory %.2f MB", info.ResourceUsage.CPUPercent, info.ResourceUsage.MemoryMB)
 }
 
 // GetExecutablePath retrieves the path to the executable of the process
