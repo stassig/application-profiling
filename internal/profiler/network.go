@@ -13,8 +13,7 @@ import (
 )
 
 // GetProcessInodeSet retrieves a set of socket inodes used by the specified process and its children
-func GetProcessInodeSet(processID int, childProcessIDs []int) map[string]struct{} {
-	processIDs := append([]int{processID}, childProcessIDs...)
+func GetProcessInodeSet(processIDs []int) map[string]struct{} {
 	return getProcessSocketInodes(processIDs)
 }
 

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"application_profiling/internal/profiler"
+	"application_profiling/internal/util"
 
 	"github.com/charmbracelet/log"
 )
@@ -26,7 +27,7 @@ func RunProfile(args []string) {
 	processInfo := profiler.GetProcessInfo(processID)
 
 	// 2. Log debug information
-	processInfo.LogProcessDetails()
+	util.LogProcessDetails(processInfo)
 
 	// 3. Save process information to a YAML file
 	processInfo.SaveAsYAML()

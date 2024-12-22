@@ -1,4 +1,3 @@
-// TO DO: Move CPU calculation to a file and refactor aggregate function
 // TO DO: Working MySQL example
 
 // --- BACKLOG ---

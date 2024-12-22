@@ -63,39 +63,14 @@ func GetProcessInfo(processID int) *ProcessInfo {
 	info.ReconstructedCommand, info.CommandLineArguments = ParseCommandLine(info.ExecutablePath, rawCommandLineArguments)
 
 	// Get resource usage and network/socket details
-	info.ResourceUsage = GetTotalResourceUsage(processID, info.ChildPIDs)
-	inodeSet := GetProcessInodeSet(processID, info.ChildPIDs)
+	processIDs := append([]int{info.PID}, info.ChildPIDs...)
+	info.ResourceUsage = GetTotalResourceUsage(processIDs)
+	inodeSet := GetProcessInodeSet(processIDs)
 	info.UnixSockets = GetUnixDomainSockets(inodeSet)
 	info.ListeningTCP = GetListeningTCPPorts(inodeSet)
 	info.ListeningUDP = GetListeningUDPPorts(inodeSet)
 
 	return info
-}
-
-// LogProcessDetails logs key details about a process in one method.
-func (processInfo *ProcessInfo) LogProcessDetails() {
-	// Initialize logger
-	logger := log.New(os.Stderr)
-	logger.SetLevel(log.DebugLevel)
-
-	// Log process details
-	logger.Debugf("Parent Process ID: %d", processInfo.PID)
-	logger.Debugf("Child process IDs: %v", processInfo.ChildPIDs)
-	logger.Debugf("Executable path: %s", processInfo.ExecutablePath)
-	logger.Debugf("Command-line arguments: %s", processInfo.CommandLineArguments)
-	logger.Debugf("Working directory: %s", processInfo.WorkingDirectory)
-	logger.Debugf("Environment variables: %v", processInfo.EnvironmentVariables)
-	logger.Debugf("Process user: %s", processInfo.ProcessUser)
-	logger.Debugf("Process group: %s", processInfo.ProcessGroup)
-	logger.Debugf("Reconstructed command: %s", processInfo.ReconstructedCommand)
-	logger.Debugf("Sockets: %v", processInfo.UnixSockets)
-	logger.Debugf("Listening TCP ports: %v", processInfo.ListeningTCP)
-	logger.Debugf("Listening UDP ports: %v", processInfo.ListeningUDP)
-	logger.Debugf("OS Version: %s", processInfo.OSImage)
-	logger.Debugf("Memory usage: %.2f MB", processInfo.ResourceUsage.MemoryMB)
-	logger.Debugf("CPU cores used: %.2f", processInfo.ResourceUsage.CPUCores)
-	logger.Debugf("Disk Read: %.2f MB", processInfo.ResourceUsage.DiskReadMB)
-	logger.Debugf("Disk Write: %.2f MB", processInfo.ResourceUsage.DiskWriteMB)
 }
 
 // GetExecutablePath retrieves the path to the executable of the process

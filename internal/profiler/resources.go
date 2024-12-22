@@ -12,42 +12,36 @@ import (
 	"github.com/charmbracelet/log"
 )
 
-// GetTotalResourceUsage aggregates resource usage for a parent process and its child processes.
-func GetTotalResourceUsage(parentPID int, childPIDs []int) *ProcessUsage {
-	totalUsage := &ProcessUsage{}
+// GetTotalResourceUsage aggregates resource usage for a process and its children.
+func GetTotalResourceUsage(processIDs []int) *ProcessUsage {
+	// Initialize total resource usage struct
+	totalResourceUsage := &ProcessUsage{}
 
-	// 1) Aggregate usage for parent process
-	aggregateProcessUsage(totalUsage, parentPID)
-
-	// 2) Aggregate usage for child processes
-	for _, childPID := range childPIDs {
-		aggregateProcessUsage(totalUsage, childPID)
+	// Aggregate resource usage for all processes
+	for _, processID := range processIDs {
+		aggregateResourceUsage(processID, totalResourceUsage)
 	}
 
-	// 3) Round all values to 2 decimal places
-	totalUsage = roundProcessUsage(totalUsage)
-
-	return totalUsage
+	// Round all values to 2 decimal places
+	return roundProcessUsage(totalResourceUsage)
 }
 
-// GetResourceUsageForPID calculates CPU and memory usage for a process.
-func GetResourceUsageForPID(pid int) *ProcessUsage {
-	// Get CPU usage as both percentage and cores
-	cpuCoresUsed := calculateCPUUsage(pid)
-
-	// Get memory usage in MB
-	memoryMB := getMemoryUsage(pid)
-
-	// Get disk I/O stats
+// aggregateResourceUsage aggregates resource usage for a process and adds it to the given ProcessUsage struct.
+func aggregateResourceUsage(pid int, usage *ProcessUsage) {
+	usage.CPUCores += calculateCPUUsage(pid)
+	usage.MemoryMB += getMemoryUsage(pid)
 	diskReadMB, diskWriteMB := getDiskIOStatsForPID(pid)
+	usage.DiskReadMB += diskReadMB
+	usage.DiskWriteMB += diskWriteMB
+}
 
-	// Return ProcessUsage struct
-	return &ProcessUsage{
-		CPUCores:    cpuCoresUsed,
-		MemoryMB:    memoryMB,
-		DiskReadMB:  diskReadMB,
-		DiskWriteMB: diskWriteMB,
-	}
+// roundProcessUsage rounds all values in a ProcessUsage struct to two decimal places.
+func roundProcessUsage(usage *ProcessUsage) *ProcessUsage {
+	usage.CPUCores = roundToTwoDecimalPlaces(usage.CPUCores)
+	usage.MemoryMB = roundToTwoDecimalPlaces(usage.MemoryMB)
+	usage.DiskReadMB = roundToTwoDecimalPlaces(usage.DiskReadMB)
+	usage.DiskWriteMB = roundToTwoDecimalPlaces(usage.DiskWriteMB)
+	return usage
 }
 
 // GetDiskIOStatsForPID retrieves disk I/O stats for the given PID.
@@ -179,29 +173,6 @@ func getProcessStatFields(processID int) (float64, float64, float64) {
 	startTimeTicks, _ := strconv.ParseFloat(fields[21], 64)
 
 	return userTimeTicks, systemTimeTicks, startTimeTicks
-}
-
-// aggregateProcessUsage aggregates the resource usage of a single process into the provided total.
-func aggregateProcessUsage(totalUsage *ProcessUsage, pid int) {
-	processUsage := GetResourceUsageForPID(pid)
-
-	if processUsage != nil {
-		// Add CPU and memory stats
-		totalUsage.CPUCores += processUsage.CPUCores
-		totalUsage.MemoryMB += processUsage.MemoryMB
-		// Add disk I/O stats
-		totalUsage.DiskReadMB += processUsage.DiskReadMB
-		totalUsage.DiskWriteMB += processUsage.DiskWriteMB
-	}
-}
-
-// roundProcessUsage rounds all values in a ProcessUsage struct to two decimal places.
-func roundProcessUsage(usage *ProcessUsage) *ProcessUsage {
-	usage.CPUCores = roundToTwoDecimalPlaces(usage.CPUCores)
-	usage.MemoryMB = roundToTwoDecimalPlaces(usage.MemoryMB)
-	usage.DiskReadMB = roundToTwoDecimalPlaces(usage.DiskReadMB)
-	usage.DiskWriteMB = roundToTwoDecimalPlaces(usage.DiskWriteMB)
-	return usage
 }
 
 // convertBytesToMB converts bytes to megabytes.
