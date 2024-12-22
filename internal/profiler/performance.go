@@ -2,43 +2,45 @@ package profiler
 
 import (
 	"fmt"
+	"math"
 	"os"
+	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/log"
 )
 
-// ResourceUsageInfo holds approximate CPU and memory usage stats for a process.
-type ResourceUsageInfo struct {
-	CPUPercent float64 // Approximate % of CPU usage
-	MemoryMB   float64 // Memory usage in MB
-}
-
 // GetTotalResourceUsage calculates the total CPU and memory usage for a parent process and its children.
 func GetTotalResourceUsage(parentPID int, childPIDs []int) *ResourceUsageInfo {
-	totalCPU := 0.0
-	totalMemory := 0.0
+	totalCPUPercent := 0.0
+	totalMemoryMB := 0.0
+	totalCPUCores := 0.0
 
 	// Calculate usage for the parent process
 	parentUsage := GetResourceUsageForPID(parentPID)
 	if parentUsage != nil {
-		totalCPU += parentUsage.CPUPercent
-		totalMemory += parentUsage.MemoryMB
+		totalCPUPercent += parentUsage.CPUPercent
+		totalMemoryMB += parentUsage.MemoryMB
+		totalCPUCores += parentUsage.CPUCores
 	}
 
 	// Calculate usage for each child process
 	for _, childPID := range childPIDs {
 		childUsage := GetResourceUsageForPID(childPID)
 		if childUsage != nil {
-			totalCPU += childUsage.CPUPercent
-			totalMemory += childUsage.MemoryMB
+			totalCPUPercent += childUsage.CPUPercent
+			totalMemoryMB += childUsage.MemoryMB
+			totalCPUCores += childUsage.CPUCores
 		}
 	}
 
+	// Round all values to 2 decimal places before returning
 	return &ResourceUsageInfo{
-		CPUPercent: totalCPU,
-		MemoryMB:   totalMemory,
+		CPUPercent: roundToTwoDecimalPlaces(totalCPUPercent),
+		CPUCores:   roundToTwoDecimalPlaces(totalCPUCores),
+		MemoryMB:   roundToTwoDecimalPlaces(totalMemoryMB),
 	}
 }
 
@@ -50,14 +52,20 @@ func GetResourceUsageForPID(pid int) *ResourceUsageInfo {
 		log.Error("Failed to read system uptime", "error", err)
 	}
 
-	// 2) Read /proc/<pid>/stat for process CPU times and start time
+	// 2) Fetch clock ticks per second
+	clockTicks, err := getClockTicks()
+	if err != nil {
+		log.Error("Failed to retrieve clock ticks per second (SC_CLK_TCK)", "error", err)
+		clockTicks = 100 // Default fallback
+	}
+
+	// 3) Read /proc/<pid>/stat for process CPU times and start time
 	procStat, err := os.ReadFile(fmt.Sprintf("/proc/%d/stat", pid))
 	if err != nil {
 		log.Errorf("Failed to read /proc/%d/stat", pid)
 	}
 
-	// 3) Parse CPU times from /proc/<pid>/stat
-	// stat format reference: http://man7.org/linux/man-pages/man5/proc.5.html
+	// Parse CPU times from /proc/<pid>/stat
 	fields := strings.Fields(string(procStat))
 	if len(fields) < 22 {
 		log.Errorf("Unexpected format in /proc/%d/stat", pid)
@@ -68,21 +76,16 @@ func GetResourceUsageForPID(pid int) *ResourceUsageInfo {
 	stimeTicks, _ := strconv.ParseFloat(fields[14], 64)
 	startTimeTicks, _ := strconv.ParseFloat(fields[21], 64)
 
-	// Convert from clock ticks to seconds. Typically sysconf(_SC_CLK_TCK) = 100 on most Linux systems,
-	// but you may want to dynamically fetch the clock ticks (e.g. sysconf SC_CLK_TCK).
-	clockTicks := float64(100)
+	// Convert from clock ticks to seconds
 	totalTimeSec := (utimeTicks + stimeTicks) / clockTicks
 
 	// Process start time in seconds since boot
 	startTimeSec := startTimeTicks / clockTicks
 
-	// 4) Calculate approximate CPU usage as a percentage
-	// Process uptime in seconds = system uptime - (start time of process in seconds)
+	// 4) Calculate approximate CPU usage in cores
 	processUptime := uptime - startTimeSec
-	var cpuPercent float64
-	if processUptime > 0 {
-		cpuPercent = (totalTimeSec / processUptime) * 100.0
-	}
+	numCores := float64(runtime.NumCPU()) // Get number of CPU cores
+	cpuCoresUsed := (totalTimeSec / processUptime) * numCores
 
 	// 5) Read /proc/<pid>/statm for memory usage
 	statmData, err := os.ReadFile(fmt.Sprintf("/proc/%d/statm", pid))
@@ -97,18 +100,31 @@ func GetResourceUsageForPID(pid int) *ResourceUsageInfo {
 
 	// resident set size in pages = statmFields[1]
 	rssPages, _ := strconv.ParseInt(statmFields[1], 10, 64)
-	pageSize := int64(4096) // Typically 4KB on x86_64, but can vary
+	pageSize := int64(4096)
 	memoryBytes := rssPages * pageSize
 
 	// Convert memory to MB
 	memoryMB := float64(memoryBytes) / (1024 * 1024)
 
-	usage := &ResourceUsageInfo{
-		CPUPercent: cpuPercent,
+	// Return resource usage information
+	return &ResourceUsageInfo{
+		CPUPercent: cpuCoresUsed / numCores * 100,
+		CPUCores:   cpuCoresUsed,
 		MemoryMB:   memoryMB,
 	}
+}
 
-	return usage
+// getClockTicks retrieves the SC_CLK_TCK value (clock ticks per second).
+func getClockTicks() (float64, error) {
+	output, err := exec.Command("getconf", "CLK_TCK").Output()
+	if err != nil {
+		return 0, fmt.Errorf("failed to retrieve clock ticks: %w", err)
+	}
+	clockTicks, err := strconv.ParseFloat(strings.TrimSpace(string(output)), 64)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse clock ticks: %w", err)
+	}
+	return clockTicks, nil
 }
 
 // getSystemUptime returns the system uptime in seconds from /proc/uptime
@@ -122,4 +138,8 @@ func getSystemUptime() (float64, error) {
 		return 0, fmt.Errorf("unexpected format in /proc/uptime")
 	}
 	return strconv.ParseFloat(fields[0], 64)
+}
+
+func roundToTwoDecimalPlaces(value float64) float64 {
+	return math.Round(value*100) / 100
 }
