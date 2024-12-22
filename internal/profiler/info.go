@@ -24,6 +24,7 @@ type ProcessInfo struct {
 	UnixSockets          []string       `yaml:"unixsockets"`
 	ListeningTCP         []int          `yaml:"listeningtcp"`
 	ListeningUDP         []int          `yaml:"listeningudp"`
+	OSImage              string         `yaml:"osimage"`
 }
 
 // FlagArgument represents a cmdline flag and its associated value.
@@ -52,6 +53,7 @@ func GetProcessInfo(processID int) *ProcessInfo {
 	info.ListeningTCP = GetListeningTCPPorts(inodeSet)
 	info.ListeningUDP = GetListeningUDPPorts(inodeSet)
 	info.ReconstructedCommand, info.CommandLineArguments = ParseCommandLine(info.ExecutablePath, rawCommandLineArguments)
+	info.OSImage = GetOSRelease()
 
 	return info
 }
@@ -72,6 +74,7 @@ func (info *ProcessInfo) LogProcessDetails() {
 	logger.Debugf("Sockets: %v", info.UnixSockets)
 	logger.Debugf("Listening TCP ports: %v", info.ListeningTCP)
 	logger.Debugf("Listening UDP ports: %v", info.ListeningUDP)
+	logger.Debugf("OS Version: %s", info.OSImage)
 }
 
 // GetExecutablePath retrieves the path to the executable of the process
@@ -193,6 +196,35 @@ func GetProcessIDbyExecutable(executablePath string) int {
 	}
 
 	return pid
+}
+
+func GetOSRelease() string {
+	// Read the /etc/os-release file
+	data, err := os.ReadFile("/etc/os-release")
+	if err != nil {
+		log.Error("Failed to read /etc/os-release", "error", err)
+		return "ubuntu:latest" // Default fallback
+	}
+
+	// Parse the file to extract NAME and VERSION_ID
+	var name, versionID string
+	lines := strings.Split(string(data), "\n")
+	for _, line := range lines {
+		if strings.HasPrefix(line, "NAME=") {
+			name = strings.Trim(strings.Split(line, "=")[1], "\"")
+		}
+		if strings.HasPrefix(line, "VERSION_ID=") {
+			versionID = strings.Trim(strings.Split(line, "=")[1], "\"")
+		}
+	}
+
+	// Default to ubuntu:latest if parsing fails
+	if name == "" || versionID == "" {
+		return "ubuntu:latest"
+	}
+
+	// Format the base image name
+	return fmt.Sprintf("%s:%s", strings.ToLower(name), versionID)
 }
 
 // parseEnvironmentVariables parses environment variables from a null-byte separated string

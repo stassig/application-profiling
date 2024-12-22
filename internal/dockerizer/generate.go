@@ -8,8 +8,8 @@ import (
 	"text/template"
 )
 
-const dockerfileTemplateContent = `# Use the official Ubuntu image as the base
-FROM ubuntu:latest
+const dockerfileTemplateContent = `# Set the base image
+FROM {{.BaseImage}}
 
 # Copy the profile archive
 COPY {{.TarFile}} /
@@ -49,6 +49,7 @@ type DockerfileData struct {
 	TCPPorts             []int
 	UDPPorts             []int
 	Command              string
+	BaseImage            string
 }
 
 // GenerateDockerfile generates a Dockerfile from thegiven ProcessInfo.
@@ -64,6 +65,7 @@ func GenerateDockerfile(info *profiler.ProcessInfo, dockerfilePath string, tarFi
 		TCPPorts:             info.ListeningTCP,
 		UDPPorts:             info.ListeningUDP,
 		Command:              commandLine,
+		BaseImage:            info.OSImage,
 	}
 
 	return writeDockerfile(dockerfileData, dockerfilePath)

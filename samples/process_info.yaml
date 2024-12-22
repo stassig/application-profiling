@@ -17,3 +17,4 @@ listeningtcp:
   - 80
 listeningudp:
   - 53
+osimage: ubuntu:24.04
