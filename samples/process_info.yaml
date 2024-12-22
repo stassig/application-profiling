@@ -9,7 +9,8 @@ environmentvariables:
   - LANG=C.UTF-8
   - PWD=/
   - PGDATA=/var/lib/postgresql/16/main
-processowner: root
+processuser: root
+processgroup: root
 reconstructedcommand: /usr/sbin/nginx -g "daemon on; master_process on;"
 unixsockets: []
 listeningtcp:

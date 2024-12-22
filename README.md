@@ -7,7 +7,7 @@
    - Command-line arguments
    - Working directory
    - Environment variables
-   - Process owner
+   - Process User & Group
    - Sockets
    - User permissions, etc.
 2. Save process information to a file.

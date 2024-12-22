@@ -18,7 +18,8 @@ type ProcessInfo struct {
 	CommandLineArguments []FlagArgument `yaml:"commandlinearguments"`
 	WorkingDirectory     string         `yaml:"workingdirectory"`
 	EnvironmentVariables []string       `yaml:"environmentvariables"`
-	ProcessOwner         string         `yaml:"processowner"`
+	ProcessUser          string         `yaml:"processuser"`
+	ProcessGroup         string         `yaml:"processgroup"`
 	ReconstructedCommand string         `yaml:"reconstructedcommand"`
 	UnixSockets          []string       `yaml:"unixsockets"`
 	ListeningTCP         []int          `yaml:"listeningtcp"`
@@ -46,7 +47,7 @@ func GetProcessInfo(processID int) *ProcessInfo {
 	info.ExecutablePath = GetExecutablePath(processID)
 	info.WorkingDirectory = GetWorkingDirectory(processID)
 	info.EnvironmentVariables = GetEnvironmentVariables(processID)
-	info.ProcessOwner = GetProcessOwner(processID)
+	info.ProcessUser, info.ProcessGroup = GetProcessUserAndGroup(processID)
 	info.UnixSockets = GetUnixDomainSockets(inodeSet)
 	info.ListeningTCP = GetListeningTCPPorts(inodeSet)
 	info.ListeningUDP = GetListeningUDPPorts(inodeSet)
@@ -57,16 +58,20 @@ func GetProcessInfo(processID int) *ProcessInfo {
 
 // LogProcessDetails logs key details about a process in one method.
 func (info *ProcessInfo) LogProcessDetails() {
-	log.Infof("Process ID: %d", info.PID)
-	log.Infof("Executable path: %s", info.ExecutablePath)
-	log.Infof("Command-line arguments: %s", info.CommandLineArguments)
-	log.Infof("Working directory: %s", info.WorkingDirectory)
-	log.Infof("Environment variables: %v", info.EnvironmentVariables)
-	log.Infof("Process owner: %s", info.ProcessOwner)
-	log.Infof("Reconstructed command: %s", info.ReconstructedCommand)
-	log.Infof("Sockets: %v", info.UnixSockets)
-	log.Infof("Listening TCP ports: %v", info.ListeningTCP)
-	log.Infof("Listening UDP ports: %v", info.ListeningUDP)
+	logger := log.New(os.Stderr)
+	logger.SetLevel(log.DebugLevel)
+
+	logger.Debugf("Process ID: %d", info.PID)
+	logger.Debugf("Executable path: %s", info.ExecutablePath)
+	logger.Debugf("Command-line arguments: %s", info.CommandLineArguments)
+	logger.Debugf("Working directory: %s", info.WorkingDirectory)
+	logger.Debugf("Environment variables: %v", info.EnvironmentVariables)
+	logger.Debugf("Process user: %s", info.ProcessUser)
+	logger.Debugf("Process group: %s", info.ProcessGroup)
+	logger.Debugf("Reconstructed command: %s", info.ReconstructedCommand)
+	logger.Debugf("Sockets: %v", info.UnixSockets)
+	logger.Debugf("Listening TCP ports: %v", info.ListeningTCP)
+	logger.Debugf("Listening UDP ports: %v", info.ListeningUDP)
 }
 
 // GetExecutablePath retrieves the path to the executable of the process
@@ -115,8 +120,8 @@ func GetEnvironmentVariables(processID int) []string {
 	return parseEnvironmentVariables(rawEnvironmentData)
 }
 
-// GetOwnerByPID retrieves the user associated with the process ID
-func GetProcessOwner(processID int) string {
+// GetProcessUserAndGroup retrieves the user and group associated with the process ID.
+func GetProcessUserAndGroup(processID int) (string, string) {
 	// Read the status file to get the UID of the process
 	statusFilePath := fmt.Sprintf("/proc/%d/status", processID)
 	rawStatusData, err := os.ReadFile(statusFilePath)
@@ -140,7 +145,13 @@ func GetProcessOwner(processID int) string {
 	if err != nil {
 		log.Error(fmt.Sprintf("Failed to look up user by UID (%s)", userID), "error", err)
 	}
-	return userInfo.Username
+
+	groupInfo, err := user.LookupGroupId(userInfo.Gid)
+	if err != nil {
+		log.Error(fmt.Sprintf("Failed to look up group by GID (%s)", userInfo.Gid), "error", err)
+	}
+
+	return userInfo.Username, groupInfo.Name
 }
 
 // GetChildProcessIDs retrieves a list of child process IDs for a given parent process ID

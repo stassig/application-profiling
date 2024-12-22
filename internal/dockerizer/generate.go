@@ -23,7 +23,7 @@ ENV {{.}}
 {{- end }}
 
 # Set the user and group
-USER {{.OwnerAndGroup}}
+USER {{.UserAndGroup}}
 
 # Set the working directory
 WORKDIR {{.WorkingDirectory}}
@@ -44,7 +44,7 @@ CMD [{{.Command}}]
 type DockerfileData struct {
 	TarFile              string
 	EnvironmentVariables []string
-	OwnerAndGroup        string
+	UserAndGroup         string
 	WorkingDirectory     string
 	TCPPorts             []int
 	UDPPorts             []int
@@ -53,13 +53,13 @@ type DockerfileData struct {
 
 // GenerateDockerfile generates a Dockerfile from thegiven ProcessInfo.
 func GenerateDockerfile(info *profiler.ProcessInfo, dockerfilePath string, tarFile string) error {
-	ownerAndGroup := buildOwnerAndGroup(info.ProcessOwner)
 	commandLine := buildCommandLine(info)
+	userAndGroup := fmt.Sprintf("%s:%s", info.ProcessUser, info.ProcessGroup)
 
 	dockerfileData := DockerfileData{
 		TarFile:              tarFile,
 		EnvironmentVariables: info.EnvironmentVariables,
-		OwnerAndGroup:        ownerAndGroup,
+		UserAndGroup:         userAndGroup,
 		WorkingDirectory:     info.WorkingDirectory,
 		TCPPorts:             info.ListeningTCP,
 		UDPPorts:             info.ListeningUDP,
@@ -67,18 +67,6 @@ func GenerateDockerfile(info *profiler.ProcessInfo, dockerfilePath string, tarFi
 	}
 
 	return writeDockerfile(dockerfileData, dockerfilePath)
-}
-
-// buildOwnerAndGroup returns a "user:group" string for the Docker USER directive.
-// If none is set, defaults to "root:root". If the input has no group part, duplicates the user.
-func buildOwnerAndGroup(processOwner string) string {
-	if processOwner == "" {
-		return "root:root"
-	}
-	if !strings.Contains(processOwner, ":") {
-		return processOwner + ":" + processOwner
-	}
-	return processOwner
 }
 
 // buildCommandLine constructs the CMD array from the executable path
