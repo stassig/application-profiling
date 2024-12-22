@@ -35,11 +35,13 @@ type FlagArgument struct {
 	Value string // e.g., "daemon on;"
 }
 
-// ResourceUsageInfo holds approximate CPU and memory usage stats for a process.
+// ResourceUsageInfo holds resource usage information for a process.
 type ResourceUsageInfo struct {
-	CPUPercent float64 // Approximate % of CPU usage
-	CPUCores   float64 // Fraction of CPU cores used
-	MemoryMB   float64 // Memory usage in MB
+	CPUPercent  float64 // Approximate % of CPU usage
+	CPUCores    float64 // Fraction of CPU cores used
+	MemoryMB    float64 // Memory usage in MB
+	DiskReadMB  float64 // Disk read in MB
+	DiskWriteMB float64 // Disk write in MB
 }
 
 // GetProcessInfo retrieves key information about a process by its Process ID (PID)
@@ -87,8 +89,11 @@ func (info *ProcessInfo) LogProcessDetails() {
 	logger.Debugf("Listening TCP ports: %v", info.ListeningTCP)
 	logger.Debugf("Listening UDP ports: %v", info.ListeningUDP)
 	logger.Debugf("OS Version: %s", info.OSImage)
-	logger.Debugf("Resource usage: CPU %.2f%%, Memory %.2f MB", info.ResourceUsage.CPUPercent, info.ResourceUsage.MemoryMB)
+	logger.Debugf("CPU usage: %.2f%%", info.ResourceUsage.CPUPercent)
+	logger.Debugf("Memory usage: %.2f MB", info.ResourceUsage.MemoryMB)
 	logger.Debugf("CPU cores used: %.2f", info.ResourceUsage.CPUCores)
+	logger.Debugf("Disk Read: %.2f MB", info.ResourceUsage.DiskReadMB)
+	logger.Debugf("Disk Write: %.2f MB", info.ResourceUsage.DiskWriteMB)
 }
 
 // GetExecutablePath retrieves the path to the executable of the process

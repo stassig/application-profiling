@@ -12,35 +12,45 @@ import (
 	"github.com/charmbracelet/log"
 )
 
-// GetTotalResourceUsage calculates the total CPU and memory usage for a parent process and its children.
+// GetTotalResourceUsage aggregates resource usage for a parent process and its child processes.
 func GetTotalResourceUsage(parentPID int, childPIDs []int) *ResourceUsageInfo {
 	totalCPUPercent := 0.0
 	totalMemoryMB := 0.0
 	totalCPUCores := 0.0
+	totalDiskReadMB := 0.0
+	totalDiskWriteMB := 0.0
 
-	// Calculate usage for the parent process
+	// Aggregate usage for parent process
 	parentUsage := GetResourceUsageForPID(parentPID)
 	if parentUsage != nil {
 		totalCPUPercent += parentUsage.CPUPercent
 		totalMemoryMB += parentUsage.MemoryMB
 		totalCPUCores += parentUsage.CPUCores
+		readMB, writeMB := GetDiskIOStatsForPID(parentPID)
+		totalDiskReadMB += readMB
+		totalDiskWriteMB += writeMB
 	}
 
-	// Calculate usage for each child process
+	// Aggregate usage for each child process
 	for _, childPID := range childPIDs {
 		childUsage := GetResourceUsageForPID(childPID)
 		if childUsage != nil {
 			totalCPUPercent += childUsage.CPUPercent
 			totalMemoryMB += childUsage.MemoryMB
 			totalCPUCores += childUsage.CPUCores
+			readMB, writeMB := GetDiskIOStatsForPID(childPID)
+			totalDiskReadMB += readMB
+			totalDiskWriteMB += writeMB
 		}
 	}
 
 	// Round all values to 2 decimal places before returning
 	return &ResourceUsageInfo{
-		CPUPercent: roundToTwoDecimalPlaces(totalCPUPercent),
-		CPUCores:   roundToTwoDecimalPlaces(totalCPUCores),
-		MemoryMB:   roundToTwoDecimalPlaces(totalMemoryMB),
+		CPUPercent:  roundToTwoDecimalPlaces(totalCPUPercent),
+		CPUCores:    roundToTwoDecimalPlaces(totalCPUCores),
+		MemoryMB:    roundToTwoDecimalPlaces(totalMemoryMB),
+		DiskReadMB:  roundToTwoDecimalPlaces(totalDiskReadMB),
+		DiskWriteMB: roundToTwoDecimalPlaces(totalDiskWriteMB),
 	}
 }
 
@@ -112,6 +122,33 @@ func GetResourceUsageForPID(pid int) *ResourceUsageInfo {
 		CPUCores:   cpuCoresUsed,
 		MemoryMB:   memoryMB,
 	}
+}
+
+// GetDiskIOStatsForPID retrieves disk I/O stats for the given PID.
+func GetDiskIOStatsForPID(pid int) (float64, float64) {
+	ioFilePath := fmt.Sprintf("/proc/%d/io", pid)
+	data, err := os.ReadFile(ioFilePath)
+	if err != nil {
+		log.Warnf("Failed to read disk I/O stats for PID %d: %v", pid, err)
+		return 0, 0
+	}
+
+	var readBytes, writeBytes float64
+
+	lines := strings.Split(string(data), "\n")
+	for _, line := range lines {
+		if strings.HasPrefix(line, "read_bytes:") {
+			fields := strings.Fields(line)
+			readBytes, _ = strconv.ParseFloat(fields[1], 64)
+		}
+		if strings.HasPrefix(line, "write_bytes:") {
+			fields := strings.Fields(line)
+			writeBytes, _ = strconv.ParseFloat(fields[1], 64)
+		}
+	}
+
+	// Convert bytes to MB
+	return readBytes / (1024 * 1024), writeBytes / (1024 * 1024)
 }
 
 // getClockTicks retrieves the SC_CLK_TCK value (clock ticks per second).
