@@ -13,20 +13,20 @@ import (
 
 // ProcessInfo represents the process metadata.
 type ProcessInfo struct {
-	PID                  int                `yaml:"pid"`
-	ChildPIDs            []int              `yaml:"childpids"`
-	ExecutablePath       string             `yaml:"executablepath"`
-	CommandLineArguments []FlagArgument     `yaml:"commandlinearguments"`
-	WorkingDirectory     string             `yaml:"workingdirectory"`
-	EnvironmentVariables []string           `yaml:"environmentvariables"`
-	ProcessUser          string             `yaml:"processuser"`
-	ProcessGroup         string             `yaml:"processgroup"`
-	ReconstructedCommand string             `yaml:"reconstructedcommand"`
-	UnixSockets          []string           `yaml:"unixsockets"`
-	ListeningTCP         []int              `yaml:"listeningtcp"`
-	ListeningUDP         []int              `yaml:"listeningudp"`
-	OSImage              string             `yaml:"osimage"`
-	ResourceUsage        *ResourceUsageInfo `yaml:"usage"`
+	PID                  int            `yaml:"pid"`                  // Process ID
+	ChildPIDs            []int          `yaml:"childpids"`            // Child process IDs
+	ProcessUser          string         `yaml:"processuser"`          // User running the process
+	ProcessGroup         string         `yaml:"processgroup"`         // Group running the process
+	ExecutablePath       string         `yaml:"executablepath"`       // Path to the executable
+	CommandLineArguments []FlagArgument `yaml:"commandlinearguments"` // Command-line arguments
+	ReconstructedCommand string         `yaml:"reconstructedcommand"` // Reconstructed command string
+	WorkingDirectory     string         `yaml:"workingdirectory"`     // Current working directory
+	EnvironmentVariables []string       `yaml:"environmentvariables"` // Environment variables
+	UnixSockets          []string       `yaml:"unixsockets"`          // Unix domain sockets in use
+	ListeningTCP         []int          `yaml:"listeningtcp"`         // TCP ports in use
+	ListeningUDP         []int          `yaml:"listeningudp"`         // UDP ports in use
+	OSImage              string         `yaml:"osimage"`              // Operating system information
+	ResourceUsage        *ProcessUsage  `yaml:"resourceusage"`        // Resource usage information
 }
 
 // FlagArgument represents a cmdline flag and its associated value.
@@ -36,8 +36,7 @@ type FlagArgument struct {
 }
 
 // ResourceUsageInfo holds resource usage information for a process.
-type ResourceUsageInfo struct {
-	CPUPercent  float64 // Approximate % of CPU usage
+type ProcessUsage struct {
 	CPUCores    float64 // Fraction of CPU cores used
 	MemoryMB    float64 // Memory usage in MB
 	DiskReadMB  float64 // Disk read in MB
@@ -46,54 +45,57 @@ type ResourceUsageInfo struct {
 
 // GetProcessInfo retrieves key information about a process by its Process ID (PID)
 func GetProcessInfo(processID int) *ProcessInfo {
-	// Create a new ProcessInfo object
+	// Initialize ProcessInfo object
 	info := &ProcessInfo{
 		PID: processID,
 	}
 
-	// Get the set of socket inodes used by the process and its children
-	inodeSet := GetProcessInodeSet(processID)
-
-	// Get the process information
-	rawCommandLineArguments := GetCommandLineArgs(processID)
+	// Get process information
 	info.ChildPIDs = GetChildProcessIDs(processID)
 	info.ExecutablePath = GetExecutablePath(processID)
 	info.WorkingDirectory = GetWorkingDirectory(processID)
 	info.EnvironmentVariables = GetEnvironmentVariables(processID)
 	info.ProcessUser, info.ProcessGroup = GetProcessUserAndGroup(processID)
+	info.OSImage = GetOSRelease()
+
+	// Reconstruct command line
+	rawCommandLineArguments := GetCommandLineArgs(processID)
+	info.ReconstructedCommand, info.CommandLineArguments = ParseCommandLine(info.ExecutablePath, rawCommandLineArguments)
+
+	// Get resource usage and network/socket details
+	info.ResourceUsage = GetTotalResourceUsage(processID, info.ChildPIDs)
+	inodeSet := GetProcessInodeSet(processID, info.ChildPIDs)
 	info.UnixSockets = GetUnixDomainSockets(inodeSet)
 	info.ListeningTCP = GetListeningTCPPorts(inodeSet)
 	info.ListeningUDP = GetListeningUDPPorts(inodeSet)
-	info.ReconstructedCommand, info.CommandLineArguments = ParseCommandLine(info.ExecutablePath, rawCommandLineArguments)
-	info.OSImage = GetOSRelease()
-	info.ResourceUsage = GetTotalResourceUsage(processID, info.ChildPIDs)
 
 	return info
 }
 
 // LogProcessDetails logs key details about a process in one method.
-func (info *ProcessInfo) LogProcessDetails() {
+func (processInfo *ProcessInfo) LogProcessDetails() {
+	// Initialize logger
 	logger := log.New(os.Stderr)
 	logger.SetLevel(log.DebugLevel)
 
-	logger.Debugf("Parent Process ID: %d", info.PID)
-	logger.Debugf("Child process IDs: %v", info.ChildPIDs)
-	logger.Debugf("Executable path: %s", info.ExecutablePath)
-	logger.Debugf("Command-line arguments: %s", info.CommandLineArguments)
-	logger.Debugf("Working directory: %s", info.WorkingDirectory)
-	logger.Debugf("Environment variables: %v", info.EnvironmentVariables)
-	logger.Debugf("Process user: %s", info.ProcessUser)
-	logger.Debugf("Process group: %s", info.ProcessGroup)
-	logger.Debugf("Reconstructed command: %s", info.ReconstructedCommand)
-	logger.Debugf("Sockets: %v", info.UnixSockets)
-	logger.Debugf("Listening TCP ports: %v", info.ListeningTCP)
-	logger.Debugf("Listening UDP ports: %v", info.ListeningUDP)
-	logger.Debugf("OS Version: %s", info.OSImage)
-	logger.Debugf("CPU usage: %.2f%%", info.ResourceUsage.CPUPercent)
-	logger.Debugf("Memory usage: %.2f MB", info.ResourceUsage.MemoryMB)
-	logger.Debugf("CPU cores used: %.2f", info.ResourceUsage.CPUCores)
-	logger.Debugf("Disk Read: %.2f MB", info.ResourceUsage.DiskReadMB)
-	logger.Debugf("Disk Write: %.2f MB", info.ResourceUsage.DiskWriteMB)
+	// Log process details
+	logger.Debugf("Parent Process ID: %d", processInfo.PID)
+	logger.Debugf("Child process IDs: %v", processInfo.ChildPIDs)
+	logger.Debugf("Executable path: %s", processInfo.ExecutablePath)
+	logger.Debugf("Command-line arguments: %s", processInfo.CommandLineArguments)
+	logger.Debugf("Working directory: %s", processInfo.WorkingDirectory)
+	logger.Debugf("Environment variables: %v", processInfo.EnvironmentVariables)
+	logger.Debugf("Process user: %s", processInfo.ProcessUser)
+	logger.Debugf("Process group: %s", processInfo.ProcessGroup)
+	logger.Debugf("Reconstructed command: %s", processInfo.ReconstructedCommand)
+	logger.Debugf("Sockets: %v", processInfo.UnixSockets)
+	logger.Debugf("Listening TCP ports: %v", processInfo.ListeningTCP)
+	logger.Debugf("Listening UDP ports: %v", processInfo.ListeningUDP)
+	logger.Debugf("OS Version: %s", processInfo.OSImage)
+	logger.Debugf("Memory usage: %.2f MB", processInfo.ResourceUsage.MemoryMB)
+	logger.Debugf("CPU cores used: %.2f", processInfo.ResourceUsage.CPUCores)
+	logger.Debugf("Disk Read: %.2f MB", processInfo.ResourceUsage.DiskReadMB)
+	logger.Debugf("Disk Write: %.2f MB", processInfo.ResourceUsage.DiskWriteMB)
 }
 
 // GetExecutablePath retrieves the path to the executable of the process
@@ -181,7 +183,7 @@ func GetChildProcessIDs(parentPID int) []int {
 	// Execute pgrep -P <parentPID>
 	output, err := exec.Command("pgrep", "-P", strconv.Itoa(parentPID)).Output()
 	if err != nil {
-		log.Warn("No child processes found or failed to retrieve child processes for parent PID: " + strconv.Itoa(parentPID))
+		log.Info("No child processes found for parent PID: " + strconv.Itoa(parentPID))
 		return []int{} // Return an empty slice if there are no child processes
 	}
 

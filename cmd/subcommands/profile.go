@@ -46,7 +46,7 @@ func getProcessID(args []string, useExecutable bool) int {
 		if processID == 0 {
 			log.Fatalf("[ERROR] Failed to retrieve PID for executable: %s\n", executablePath)
 		}
-		log.Printf("[INFO] Using PID %d for executable: %s\n", processID, executablePath)
+		log.Infof("Using PID %d for executable: %s", processID, executablePath)
 		return processID
 	}
 
