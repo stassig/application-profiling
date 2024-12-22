@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"application_profiling/internal/profiler"
 
@@ -14,7 +15,10 @@ import (
 func RunProfile(args []string) {
 	fs := flag.NewFlagSet("profile", flag.ExitOnError)
 	useExecutable := fs.Bool("use-executable", false, "Use a hardcoded executable to determine the PID")
+	traceWait := fs.Int("trace-wait", 5, "Duration (in seconds) to wait while the tracer captures data")
 	fs.Parse(args)
+
+	traceWaitDuration := time.Duration(*traceWait) * time.Second
 
 	processID := getProcessID(fs.Args(), *useExecutable)
 
@@ -28,7 +32,7 @@ func RunProfile(args []string) {
 	processInfo.SaveAsYAML()
 
 	// 4. Restart the process with strace monitoring
-	profiler.RestartProcess(processInfo)
+	profiler.RestartProcess(processInfo, traceWaitDuration)
 
 	// 5. Filter the strace log file to remove duplicates and invalid paths
 	profiler.FilterStraceLog(processInfo)

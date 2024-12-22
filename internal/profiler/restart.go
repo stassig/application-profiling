@@ -1,5 +1,4 @@
 // TO DO: Integrate /etc/os-release info for accurate base image
-// TO DO: More elegant solution than sleep for strace - commandline option for time
 // TO DO: Working MySQL example
 
 // --- BACKLOG ---
@@ -21,10 +20,10 @@ import (
 )
 
 // RestartProcess handles restarting a process using its ProcessInfo
-func RestartProcess(processInfo *ProcessInfo) {
+func RestartProcess(processInfo *ProcessInfo, sleepDuration time.Duration) {
 	// Restart process with monitoring
 	terminateProcess(processInfo.PID)
-	startProcessWithStrace(processInfo)
+	startProcessWithStrace(processInfo, sleepDuration)
 }
 
 // terminateProcess stops the process with the given PID
@@ -39,7 +38,7 @@ func terminateProcess(processID int) {
 }
 
 // startProcessWithStrace starts a process with strace monitoring
-func startProcessWithStrace(info *ProcessInfo) {
+func startProcessWithStrace(info *ProcessInfo, sleepDuration time.Duration) {
 	// Ensure the directories for the sockets exist
 	EnsureSocketDirectories(info.UnixSockets, info.ProcessUser)
 
@@ -58,8 +57,8 @@ func startProcessWithStrace(info *ProcessInfo) {
 		log.Error("Failed to start process with strace", "stderr", stderrBuffer.String(), "error", err)
 	}
 
-	// Sleep for a few seconds to allow strace to capture initial syscalls
-	time.Sleep(5 * time.Second)
+	// Sleep for the specified duration to allow strace to capture initial syscalls
+	time.Sleep(sleepDuration)
 
 	// Terminate the strace process after data collection
 	err = cmd.Process.Kill()
