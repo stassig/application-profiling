@@ -1,4 +1,3 @@
-// TO DO: Refactor extractFlagsAndArguments
 package profiler
 
 import (

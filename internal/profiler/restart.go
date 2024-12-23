@@ -1,10 +1,3 @@
-// TO DO: Working MySQL example
-
-// --- BACKLOG ---
-
-// TO DO: Clean up: interfacing?
-// TO DO: User groups, permissions (filter by user)
-
 package profiler
 
 import (
@@ -55,6 +48,9 @@ func startProcessWithStrace(info *ProcessInfo, sleepDuration time.Duration) {
 		log.Error("Failed to start process with strace", "stderr", stderrBuffer.String(), "error", err)
 	}
 
+	// Trigger a curl request to the process to allow strace to capture html page
+	// exec.Command("curl", "http://localhost").Run()
+
 	// Sleep for the specified duration to allow strace to capture initial syscalls
 	time.Sleep(sleepDuration)
 
@@ -74,7 +70,7 @@ func prepareStraceCommand(info *ProcessInfo, logfilePath string) *exec.Cmd {
 	cmdArgs := []string{
 		"strace",
 		"-f",
-		"-e", "trace=openat,chdir,mkdir",
+		"-e", "trace=file",
 		"-o", logfilePath,
 		"bash", "-c", info.ReconstructedCommand,
 	}

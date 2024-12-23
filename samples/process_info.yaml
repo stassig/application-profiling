@@ -1,20 +1,33 @@
-pid: 175201
-executablepath: /usr/sbin/nginx
-commandlinearguments:
-  - flag: -g
-    value: daemon on; master_process on;
-workingdirectory: /
+pid: 817162
+childpids: []
+processuser: mysql
+processgroup: mysql
+executablepath: /usr/sbin/mysqld
+commandlinearguments: []
+reconstructedcommand: "/usr/sbin/mysqld"
+workingdirectory: /var/lib/mysql
 environmentvariables:
-  - PG_OOM_ADJUST_FILE=/proc/self/oom_score_adj
   - LANG=C.UTF-8
-  - PWD=/
-  - PGDATA=/var/lib/postgresql/16/main
-processuser: root
-processgroup: root
-reconstructedcommand: /usr/sbin/nginx -g "daemon on; master_process on;"
-unixsockets: []
+  - PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/snap/bin
+  - NOTIFY_SOCKET=/run/systemd/notify
+  - USER=mysql
+  - LOGNAME=mysql
+  - HOME=/nonexistent
+  - INVOCATION_ID=62ccca8c58754de495796641b5ef1dbe
+  - JOURNAL_STREAM=7:4477010
+  - RUNTIME_DIRECTORY=/run/mysqld
+  - SYSTEMD_EXEC_PID=817162
+  - MYSQLD_PARENT_PID=1
+unixsockets:
+  - /var/run/mysqld/mysqld.sock
+  - /var/run/mysqld/mysqlx.sock
 listeningtcp:
-  - 80
-listeningudp:
-  - 53
+  - 3306
+  - 33060
+listeningudp: []
 osimage: ubuntu:24.04
+resourceusage:
+  cpucores: 0.95
+  memorymb: 390.73
+  diskreadmb: 29.86
+  diskwritemb: 15.89

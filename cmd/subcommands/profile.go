@@ -1,3 +1,10 @@
+// TO DO: Refactor cmd & subcommands
+// TO DO: Investigate Dockerfile: "RUN groupadd -r mysql" & file permissions
+
+// --- BACKLOG ---
+
+// TO DO: Clean up codebase: interfacing?
+
 package subcommands
 
 import (
@@ -5,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"application_profiling/internal/profiler"
@@ -21,8 +29,22 @@ func RunProfile(args []string) {
 
 	traceWaitDuration := time.Duration(*traceWait) * time.Second
 
-	processID := getProcessID(fs.Args(), *useExecutable)
+	// Retrieve PIDs from arguments or executable
+	processIDs := getProcessIDs(fs.Args(), *useExecutable)
+	if len(processIDs) == 0 {
+		log.Fatalf("[ERROR] No valid PIDs found for profiling.")
+	}
 
+	for _, processID := range processIDs {
+		profileProcess(processID, traceWaitDuration)
+	}
+
+	// Merge filtered logs from all processes
+	util.MergeFilteredLogs(processIDs)
+}
+
+// profileProcess profiles a single process by ID
+func profileProcess(processID int, traceWaitDuration time.Duration) {
 	// 1. Retrieve process information
 	processInfo := profiler.GetProcessInfo(processID)
 
@@ -39,8 +61,8 @@ func RunProfile(args []string) {
 	profiler.FilterStraceLog(processInfo)
 }
 
-// getProcessID retrieves the process ID from the arguments or by using the executable path
-func getProcessID(args []string, useExecutable bool) int {
+// getProcessIDs retrieves process IDs from arguments or executable
+func getProcessIDs(args []string, useExecutable bool) []int {
 	if useExecutable {
 		executablePath := "/usr/sbin/nginx"
 		processID := profiler.GetProcessIDbyExecutable(executablePath)
@@ -48,17 +70,24 @@ func getProcessID(args []string, useExecutable bool) int {
 			log.Fatalf("[ERROR] Failed to retrieve PID for executable: %s\n", executablePath)
 		}
 		log.Infof("Using PID %d for executable: %s", processID, executablePath)
-		return processID
+		return []int{processID}
 	}
 
 	if len(args) < 1 {
 		log.Fatalf("[ERROR] Usage: %s profile [-use-executable] <ProcessID>\n", filepath.Base(os.Args[0]))
 	}
 
-	processID, err := strconv.Atoi(args[0])
-	if err != nil {
-		log.Fatalf("[ERROR] Invalid Process ID (PID): %v\n", err)
+	// Parse comma-separated PIDs from arguments
+	processIDStrings := strings.Split(args[0], ",")
+	processIDs := []int{}
+
+	for _, processIDString := range processIDStrings {
+		processID, err := strconv.Atoi(strings.TrimSpace(processIDString))
+		if err != nil {
+			log.Errorf("[ERROR] Invalid Process ID: %s", processIDString)
+			continue
+		}
+		processIDs = append(processIDs, processID)
 	}
-	log.Info("Retrieved process ID from arguments", "PID", processID)
-	return processID
+	return processIDs
 }
