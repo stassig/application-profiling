@@ -1,29 +1,45 @@
+// TO DO: Investigate Dockerfile: "RUN groupadd -r mysql" & file permissions
+// TO DO: Kill only strace process (not application process)
+
+// --- BACKLOG ---
+
+// TO DO: Test production run
+// TO DO: Better instructions (man page)
+// TO DO: Clean up codebase: interfacing?
+
 package main
 
 import (
 	"fmt"
 	"os"
 
-	"application_profiling/cmd/subcommands"
+	"application_profiling/cmd/commands"
 )
 
 func main() {
+	// At least one argument is required (profile, dockerize, etc.)
 	if len(os.Args) < 2 {
-		fmt.Println("Usage: application_profiling <subcommand> [flags]")
-		fmt.Println("Available subcommands: dockerize, profile")
-		os.Exit(1)
+		printUsageAndExit()
 	}
 
-	subcommand := os.Args[1]
-	args := os.Args[2:] // the remaining arguments after the subcommand
+	// Parse command and arguments
+	command := os.Args[1]
+	arguments := os.Args[2:]
 
-	switch subcommand {
+	// Run the appropriate command
+	switch command {
 	case "dockerize":
-		subcommands.RunDockerize(args)
+		commands.RunDockerize(arguments)
 	case "profile":
-		subcommands.RunProfile(args)
+		commands.RunProfile(arguments)
 	default:
-		fmt.Printf("Unknown subcommand: %s\n", subcommand)
-		os.Exit(1)
+		printUsageAndExit()
 	}
+}
+
+// printUsageAndExit prints the usage message and exits with status code 1
+func printUsageAndExit() {
+	fmt.Println("Usage: application_profiling <command> [flags]")
+	fmt.Println("Available commands: dockerize, profile")
+	os.Exit(1)
 }
