@@ -1,5 +1,4 @@
 // TO DO: Test with Nginx
-// TO DO: Daimon off always (in cmd parser)
 // TO DO: Kill only strace process (not application process)
 
 // --- BACKLOG ---
@@ -7,7 +6,6 @@
 // TO DO: Test production run
 // TO DO: Better instructions (man page)
 // TO DO: Go Doc?
-// TO DO: Filter (Home directory, etc.)
 // TO DO: Clean up codebase: interfacing?
 
 package main

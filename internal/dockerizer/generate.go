@@ -95,7 +95,12 @@ func buildCommandLine(processInformation *profiler.ProcessInfo) string {
 
 	// Join them with commas to form a valid Docker CMD array, e.g.:
 	// CMD ["/usr/sbin/nginx", "-g", "daemon on; master_process on;"]
-	return strings.Join(commandSegments, ", ")
+	commandString := strings.Join(commandSegments, ", ")
+
+	// Replace "daemon on" with "daemon off" in the entire command string
+	commandString = strings.ReplaceAll(commandString, "daemon on", "daemon off")
+
+	return commandString
 }
 
 // writeDockerfile writes the Dockerfile to the specified path using the provided data.
