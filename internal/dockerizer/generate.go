@@ -17,6 +17,9 @@ COPY {{.TarFile}} /
 # Extract the profile and clean up the archive
 RUN tar --skip-old-files -xvf /{{.TarFile}} -C / && rm /{{.TarFile}}
 
+# Overwrite user and group data
+COPY {{.ProfileDirectory}}/etc/passwd {{.ProfileDirectory}}/etc/group /etc/
+
 # Set environment variables
 {{- range .EnvironmentVariables }}
 ENV {{.}}
@@ -43,6 +46,7 @@ CMD [{{.Command}}]
 // DockerfileData holds the data needed for the Dockerfile template.
 type DockerfileData struct {
 	TarFile              string
+	ProfileDirectory     string
 	EnvironmentVariables []string
 	UserAndGroup         string
 	WorkingDirectory     string
@@ -53,12 +57,13 @@ type DockerfileData struct {
 }
 
 // GenerateDockerfile generates a Dockerfile from thegiven ProcessInfo.
-func GenerateDockerfile(info *profiler.ProcessInfo, dockerfilePath string, tarFile string) error {
+func GenerateDockerfile(info *profiler.ProcessInfo, dockerfilePath, tarFile, profileDirectory string) error {
 	commandLine := buildCommandLine(info)
 	userAndGroup := fmt.Sprintf("%s:%s", info.ProcessUser, info.ProcessGroup)
 
 	dockerfileData := DockerfileData{
 		TarFile:              tarFile,
+		ProfileDirectory:     profileDirectory,
 		EnvironmentVariables: info.EnvironmentVariables,
 		UserAndGroup:         userAndGroup,
 		WorkingDirectory:     info.WorkingDirectory,

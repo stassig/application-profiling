@@ -21,16 +21,16 @@ type DockerizeOptions struct {
 }
 
 // RunDockerize handles the "dockerize" command logic
-func RunDockerize(args []string) {
+func RunDockerize(arguments []string) {
 	// Parse command-line arguments
-	options := parseDockerizeArguments(args)
+	options := parseDockerizeArguments(arguments)
 
 	// Execute the Dockerization process
 	executeDockerization(options)
 }
 
 // parseDockerizeArguments parses command-line arguments for the Dockerize command
-func parseDockerizeArguments(args []string) DockerizeOptions {
+func parseDockerizeArguments(arguments []string) DockerizeOptions {
 	// Create a new flag set for the Dockerize command
 	flagSet := flag.NewFlagSet("dockerize", flag.ExitOnError)
 
@@ -42,7 +42,7 @@ func parseDockerizeArguments(args []string) DockerizeOptions {
 	tarArchivePath := flagSet.String("tar-file", "bin/containerization/profile.tar.gz", "Path to save the tar archive of the profile directory")
 
 	// Parse flags from the arguments
-	flagSet.Parse(args)
+	flagSet.Parse(arguments)
 
 	return DockerizeOptions{
 		ProcessInfoFile:  *processInfoFile,
@@ -78,7 +78,7 @@ func executeDockerization(options DockerizeOptions) {
 	}
 
 	// 5. Generate the Dockerfile
-	if err := dockerizer.GenerateDockerfile(processInfo, options.DockerfilePath, filepath.Base(options.TarArchivePath)); err != nil {
+	if err := dockerizer.GenerateDockerfile(processInfo, options.DockerfilePath, filepath.Base(options.TarArchivePath), options.ProfileDirectory); err != nil {
 		log.Fatalf("Failed to generate Dockerfile: %v", err)
 	}
 

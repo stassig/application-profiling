@@ -7,9 +7,8 @@ COPY profile.tar.gz /
 # Extract the profile and clean up the archive
 RUN tar --skip-old-files -xvf /profile.tar.gz -C / && rm /profile.tar.gz
 
-# Add user and group files
-COPY profile/etc/passwd /etc/passwd
-COPY profile/etc/group /etc/group
+# Overwrite user and group data
+COPY profile/etc/passwd profile/etc/group /etc/
 
 # Set environment variables
 ENV LANG=C.UTF-8
