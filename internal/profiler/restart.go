@@ -37,25 +37,25 @@ func startProcessWithStrace(info *ProcessInfo, sleepDuration time.Duration) {
 	logfilePath := BuildFilePath("bin/tracing", fmt.Sprintf("strace_log_%d.log", info.PID))
 
 	// Prepare the strace command
-	cmd := prepareStraceCommand(info, logfilePath)
+	command := prepareStraceCommand(info, logfilePath)
 	var stderrBuffer bytes.Buffer
-	cmd.Stderr = &stderrBuffer
+	command.Stderr = &stderrBuffer
 
 	// Start the process with strace
 	log.Info(fmt.Sprintf("Starting process with strace: %s", info.ReconstructedCommand))
-	err := cmd.Start()
+	err := command.Start()
 	if err != nil {
 		log.Error("Failed to start process with strace", "stderr", stderrBuffer.String(), "error", err)
 	}
 
-	// Trigger a curl request to the process to allow strace to capture html page
-	// exec.Command("curl", "http://localhost").Run()
+	// Trigger a GET request to the application to simulate traffic
+	exec.Command("curl", "http://localhost").Run()
 
 	// Sleep for the specified duration to allow strace to capture initial syscalls
 	time.Sleep(sleepDuration)
 
 	// Terminate the strace process after data collection
-	err = cmd.Process.Kill()
+	err = command.Process.Kill()
 	if err != nil {
 		log.Error("Failed to kill strace process", "error", err)
 	}
@@ -63,21 +63,21 @@ func startProcessWithStrace(info *ProcessInfo, sleepDuration time.Duration) {
 
 // prepareStraceCommand constructs the strace command to execute
 func prepareStraceCommand(info *ProcessInfo, logfilePath string) *exec.Cmd {
-	// Modify the reconstructed command to include sudo -u <process_user>
-	// userPrefixedCommand := fmt.Sprintf("sudo -u %s %s", info.ProcessUser, info.ReconstructedCommand)
+	// Use setsid to start the process in a new session (detach from strace)
+	commandline := fmt.Sprintf("setsid %s", info.ReconstructedCommand)
 
 	// Prepare the strace command arguments
-	cmdArgs := []string{
+	commandArguments := []string{
 		"strace",
 		"-f",
 		"-e", "trace=file",
 		"-o", logfilePath,
-		"bash", "-c", info.ReconstructedCommand,
+		"bash", "-c", commandline,
 	}
 
-	cmd := exec.Command("sudo", cmdArgs...)
-	cmd.Dir = info.WorkingDirectory
-	cmd.Env = info.EnvironmentVariables
+	command := exec.Command("sudo", commandArguments...)
+	command.Dir = info.WorkingDirectory
+	command.Env = info.EnvironmentVariables
 
-	return cmd
+	return command
 }

@@ -16,6 +16,7 @@ var (
 		"/var/lock": true, "/var/log": true, "/var/mail": true, "/var/opt": true, "/var/run": true, "/var/spool": true,
 		"/var/tmp": true, "/var/www": true, "/usr/local/bin/bash": true, "/usr/local/sbin/bash": true,
 		"/usr/sbin/bash": true, "/usr/bin/bash": true, "/usr/lib/x86_64-linux-gnu": true, "/*": true,
+		"/usr/bin/setsid": true,
 	}
 
 	ExcludePrefixesSet = map[string]bool{

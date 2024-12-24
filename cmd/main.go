@@ -1,11 +1,10 @@
-// TO DO: Test with Nginx
-// TO DO: Kill only strace process (not application process)
+// TO DO: Test complete workflow for NGINX and MySQL
+// TO DO: Sample folders for testing
 
 // --- BACKLOG ---
 
-// TO DO: Test production run
-// TO DO: Better instructions (man page)
 // TO DO: Go Doc?
+// TO DO: Better instructions (man page)
 // TO DO: Clean up codebase: interfacing?
 
 package main
