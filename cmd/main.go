@@ -1,4 +1,6 @@
-// TO DO: Investigate Dockerfile: "RUN groupadd -r mysql" & file permissions
+// TO DO: Update Dockerfile creation (separate user files copy)
+// TO DO: Test with Nginx
+// TO DO: Daimon off always (in cmd parser)
 // TO DO: Kill only strace process (not application process)
 
 // --- BACKLOG ---
