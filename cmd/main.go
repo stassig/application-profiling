@@ -1,6 +1,3 @@
-// TO DO: Test complete workflow for NGINX and MySQL
-// TO DO: Sample folders for testing
-
 // --- BACKLOG ---
 
 // TO DO: Go Doc?

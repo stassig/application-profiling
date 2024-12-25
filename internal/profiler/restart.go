@@ -47,6 +47,8 @@ func startProcessWithStrace(info *ProcessInfo, sleepDuration time.Duration) {
 	if err != nil {
 		log.Error("Failed to start process with strace", "stderr", stderrBuffer.String(), "error", err)
 	}
+	// Sleep to allow the process to start
+	time.Sleep(1 * time.Second)
 
 	// Trigger a GET request to the application to simulate traffic
 	exec.Command("curl", "http://localhost").Run()

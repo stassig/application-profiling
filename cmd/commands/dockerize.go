@@ -78,7 +78,7 @@ func executeDockerization(options DockerizeOptions) {
 	}
 
 	// 5. Generate the Dockerfile
-	if err := dockerizer.GenerateDockerfile(processInfo, options.DockerfilePath, filepath.Base(options.TarArchivePath), options.ProfileDirectory); err != nil {
+	if err := dockerizer.GenerateDockerfile(processInfo, options.DockerfilePath, filepath.Base(options.TarArchivePath), filepath.Base(options.ProfileDirectory)); err != nil {
 		log.Fatalf("Failed to generate Dockerfile: %v", err)
 	}
 

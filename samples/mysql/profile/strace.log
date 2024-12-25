@@ -62,4 +62,3 @@
 /var/lib/mysql-files
 /var/log/mysql
 /var/run/mysqld
-/var/run/utmp

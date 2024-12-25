@@ -1,0 +1,37 @@
+pid: 489509
+childpids:
+- 489510
+- 489511
+- 489512
+- 489513
+- 489514
+- 489515
+- 489516
+- 489517
+- 489518
+- 489519
+- 489520
+- 489521
+- 489522
+- 489523
+- 489524
+- 489525
+processuser: root
+processgroup: root
+executablepath: /usr/sbin/nginx
+commandlinearguments:
+- flag: -g
+  value: daemon on; master_process on;
+reconstructedcommand: /usr/sbin/nginx -g "daemon on; master_process on;"
+workingdirectory: /
+environmentvariables: []
+unixsockets: []
+listeningtcp:
+- 80
+listeningudp: []
+osimage: ubuntu:24.04
+resourceusage:
+  cpucores: 0
+  memorymb: 67
+  diskreadmb: 0
+  diskwritemb: 0

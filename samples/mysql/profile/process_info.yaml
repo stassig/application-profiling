@@ -1,10 +1,10 @@
-pid: 817162
+pid: 496003
 childpids: []
 processuser: mysql
 processgroup: mysql
 executablepath: /usr/sbin/mysqld
 commandlinearguments: []
-reconstructedcommand: "/usr/sbin/mysqld"
+reconstructedcommand: "/usr/sbin/mysqld "
 workingdirectory: /var/lib/mysql
 environmentvariables:
   - LANG=C.UTF-8
@@ -13,10 +13,10 @@ environmentvariables:
   - USER=mysql
   - LOGNAME=mysql
   - HOME=/nonexistent
-  - INVOCATION_ID=62ccca8c58754de495796641b5ef1dbe
-  - JOURNAL_STREAM=7:4477010
+  - INVOCATION_ID=57deaa9208a44849bb19ca6024cd5af9
+  - JOURNAL_STREAM=7:6252083
   - RUNTIME_DIRECTORY=/run/mysqld
-  - SYSTEMD_EXEC_PID=817162
+  - SYSTEMD_EXEC_PID=496003
   - MYSQLD_PARENT_PID=1
 unixsockets:
   - /var/run/mysqld/mysqld.sock
@@ -27,7 +27,7 @@ listeningtcp:
 listeningudp: []
 osimage: ubuntu:24.04
 resourceusage:
-  cpucores: 0.95
-  memorymb: 390.73
-  diskreadmb: 29.86
-  diskwritemb: 15.89
+  cpucores: 0.13
+  memorymb: 390.05
+  diskreadmb: 23.12
+  diskwritemb: 16.02
