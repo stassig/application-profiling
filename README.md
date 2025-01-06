@@ -1,3 +1,5 @@
+⚠️ Work in Progress: This document is not the final version and will be updated with additional details.
+
 # Application Profiling
 
 ## Step 1: Dependency Gathering
