@@ -1,7 +1,7 @@
 package commands
 
 import (
-	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -23,33 +23,27 @@ type DockerizeOptions struct {
 // RunDockerize handles the "dockerize" command logic
 func RunDockerize(arguments []string) {
 	// Parse command-line arguments
-	options := parseDockerizeArguments(arguments)
+	options := parseDockerizeArguments(arguments[0])
 
 	// Execute the Dockerization process
 	executeDockerization(options)
 }
 
-// parseDockerizeArguments parses command-line arguments for the Dockerize command
-func parseDockerizeArguments(arguments []string) DockerizeOptions {
-	// Create a new flag set for the Dockerize command
-	flagSet := flag.NewFlagSet("dockerize", flag.ExitOnError)
-
-	// Define command-line flags
-	processInfoFile := flagSet.String("process-info", "samples/process_info.yaml", "Path to the YAML file containing process information")
-	traceLogFile := flagSet.String("trace-log", "samples/strace.log", "Path to the filtered trace log containing file paths")
-	dockerfilePath := flagSet.String("dockerfile", "bin/containerization/Dockerfile", "Path to save the generated Dockerfile")
-	profileDirectory := flagSet.String("profile-dir", "bin/containerization/profile", "Directory to build the minimal filesystem")
-	tarArchivePath := flagSet.String("tar-file", "bin/containerization/profile.tar.gz", "Path to save the tar archive of the profile directory")
-
-	// Parse flags from the arguments
-	flagSet.Parse(arguments)
+// parseDockerizeArguments generates DockerizeOptions using the provided PID
+func parseDockerizeArguments(pid string) DockerizeOptions {
+	// Define file paths
+	processInfoFile := fmt.Sprintf("vm2container/%s/profile/process_info.yaml", pid)
+	traceLogFile := fmt.Sprintf("vm2container/%s/profile/strace_merged.log", pid)
+	dockerfilePath := fmt.Sprintf("vm2container/%s/dockerize/Dockerfile", pid)
+	profileDirectory := fmt.Sprintf("vm2container/%s/dockerize/profile", pid)
+	tarArchivePath := fmt.Sprintf("vm2container/%s/dockerize/profile.tar.gz", pid)
 
 	return DockerizeOptions{
-		ProcessInfoFile:  *processInfoFile,
-		TraceLogFile:     *traceLogFile,
-		DockerfilePath:   *dockerfilePath,
-		ProfileDirectory: *profileDirectory,
-		TarArchivePath:   *tarArchivePath,
+		ProcessInfoFile:  processInfoFile,
+		TraceLogFile:     traceLogFile,
+		DockerfilePath:   dockerfilePath,
+		ProfileDirectory: profileDirectory,
+		TarArchivePath:   tarArchivePath,
 	}
 }
 

@@ -1,7 +1,14 @@
+// TODO: - Instructions for test environment setup
+//	- VM: Ubuntu 24.04 server (4 CPU cores, 8GB RAM, 50GB disk)
+//  - Tools: Docker, MySQL, NGINX, strace
+
+// TO DO: Bundle the application as a binary?
+// TO DO: -h flag (man page) for help
+// TO DO: Readme: instructions for running the application
+
 // --- BACKLOG ---
 
 // TO DO: Go Doc?
-// TO DO: Better instructions (man page)
 // TO DO: Clean up codebase: interfacing?
 
 package main

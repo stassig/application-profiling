@@ -28,3 +28,4 @@ go.work.sum
 /bin/
 /samples/mysql/dockerize/profile*
 /samples/nginx/dockerize/profile*
+/vm2container/

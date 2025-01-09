@@ -21,8 +21,9 @@ var (
 // FilterStraceLog reads a raw strace log file, filters file paths, and writes to a new log file
 func FilterStraceLog(info *ProcessInfo) {
 	// Get the input and output file paths
-	inputFilePath := BuildFilePath("bin/tracing", fmt.Sprintf("strace_log_%d.log", info.PID))
-	outputFilePath := BuildFilePath("bin/tracing", fmt.Sprintf("strace_log_%d_filtered.log", info.PID))
+
+	inputFilePath := BuildFilePath(fmt.Sprintf("vm2container/%d/profile", info.PID), "strace_raw.log")
+	outputFilePath := BuildFilePath(fmt.Sprintf("vm2container/%d/profile", info.PID), "strace_filtered.log")
 
 	// Open input file
 	inputFile, err := os.Open(inputFilePath)

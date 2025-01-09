@@ -34,7 +34,7 @@ func startProcessWithStrace(info *ProcessInfo, sleepDuration time.Duration) {
 	EnsureSocketDirectories(info.UnixSockets, info.ProcessUser)
 
 	// Get the output file path for strace
-	logfilePath := BuildFilePath("bin/tracing", fmt.Sprintf("strace_log_%d.log", info.PID))
+	logfilePath := BuildFilePath(fmt.Sprintf("vm2container/%d/profile", info.PID), "strace_raw.log")
 
 	// Prepare the strace command
 	command := prepareStraceCommand(info, logfilePath)
