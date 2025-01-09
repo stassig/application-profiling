@@ -18,7 +18,7 @@ func MergeFilteredLogs(processIDs []int) {
 
 	// Read filtered logs for each PID
 	for _, pid := range processIDs {
-		filteredFilePath := profiler.BuildFilePath(fmt.Sprintf("vm2container/%d/profile", pid), "strace_filtered.log")
+		filteredFilePath := profiler.BuildFilePath(fmt.Sprintf("output/%d/profile", pid), "strace_filtered.log")
 
 		file, err := os.Open(filteredFilePath)
 		if err != nil {
@@ -45,7 +45,7 @@ func MergeFilteredLogs(processIDs []int) {
 
 	// Write to a new merged file
 	lastPID := processIDs[len(processIDs)-1]
-	mergedFilePath := profiler.BuildFilePath(fmt.Sprintf("vm2container/%d/profile", lastPID), "strace_merged.log")
+	mergedFilePath := profiler.BuildFilePath(fmt.Sprintf("output/%d/profile", lastPID), "strace_merged.log")
 
 	mergedFile, err := os.Create(mergedFilePath)
 	if err != nil {

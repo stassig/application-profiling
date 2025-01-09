@@ -12,7 +12,7 @@ import (
 // SaveAsYAML saves the ProcessInfo object to a YAML file
 func (info *ProcessInfo) SaveAsYAML() {
 	// Get the file path for the YAML file
-	filePath := BuildFilePath(fmt.Sprintf("vm2container/%d/profile", info.PID), "process_info.yaml")
+	filePath := BuildFilePath(fmt.Sprintf("output/%d/profile", info.PID), "process_info.yaml")
 
 	// Create or overwrite the specified file
 	file, err := os.Create(filePath)

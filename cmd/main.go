@@ -1,14 +1,12 @@
-// TODO: - Instructions for test environment setup
+// TODO: Readme: instructions for running the application
+// TODO: Instructions for test environment setup
 //	- VM: Ubuntu 24.04 server (4 CPU cores, 8GB RAM, 50GB disk)
 //  - Tools: Docker, MySQL, NGINX, strace
 
-// TO DO: Bundle the application as a binary?
-// TO DO: -h flag (man page) for help
-// TO DO: Readme: instructions for running the application
+// TODO: More progress statements (e.g., "Monitoring...")
 
 // --- BACKLOG ---
 
-// TO DO: Go Doc?
 // TO DO: Clean up codebase: interfacing?
 
 package main
@@ -32,6 +30,8 @@ func main() {
 
 	// Run the appropriate command
 	switch command {
+	case "-h", "--help":
+		printUsageAndExit()
 	case "dockerize":
 		commands.RunDockerize(arguments)
 	case "profile":
@@ -43,7 +43,29 @@ func main() {
 
 // printUsageAndExit prints the usage message and exits with status code 1
 func printUsageAndExit() {
-	fmt.Println("Usage: application_profiling <command> [flags]")
-	fmt.Println("Available commands: dockerize, profile")
-	os.Exit(1)
+	fmt.Println(`
+Usage: vm2container <command> [flags]
+
+Commands:
+  profile     Analyze Unix processes to collect runtime application dependencies.
+              Accepts comma-separated process IDs (PIDs). The last PID is treated
+              as the main application process. Example: profile 1234,5678
+
+  dockerize   Generate container artifacts for the profiled application.
+              Requires the main application PID of the profiled processes.
+              Example: dockerize 5678
+
+Flags:
+  -trace-wait <seconds>    (profile only) Duration to wait while capturing
+                           runtime data. Default: 5 seconds.
+
+  -h, --help               Display this help message.
+
+Examples:
+  vm2container profile -trace-wait 10 1234,5678
+  vm2container dockerize 5678
+
+For detailed documentation, see the README.
+    `)
+	os.Exit(0)
 }

@@ -32,11 +32,11 @@ func RunDockerize(arguments []string) {
 // parseDockerizeArguments generates DockerizeOptions using the provided PID
 func parseDockerizeArguments(pid string) DockerizeOptions {
 	// Define file paths
-	processInfoFile := fmt.Sprintf("vm2container/%s/profile/process_info.yaml", pid)
-	traceLogFile := fmt.Sprintf("vm2container/%s/profile/strace_merged.log", pid)
-	dockerfilePath := fmt.Sprintf("vm2container/%s/dockerize/Dockerfile", pid)
-	profileDirectory := fmt.Sprintf("vm2container/%s/dockerize/profile", pid)
-	tarArchivePath := fmt.Sprintf("vm2container/%s/dockerize/profile.tar.gz", pid)
+	processInfoFile := fmt.Sprintf("output/%s/profile/process_info.yaml", pid)
+	traceLogFile := fmt.Sprintf("output/%s/profile/strace_merged.log", pid)
+	dockerfilePath := fmt.Sprintf("output/%s/dockerize/Dockerfile", pid)
+	profileDirectory := fmt.Sprintf("output/%s/dockerize/profile", pid)
+	tarArchivePath := fmt.Sprintf("output/%s/dockerize/profile.tar.gz", pid)
 
 	return DockerizeOptions{
 		ProcessInfoFile:  processInfoFile,

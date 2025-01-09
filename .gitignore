@@ -25,7 +25,6 @@ go.work.sum
 .env
 
 # Output of the application
-/bin/
+/output/
 /samples/mysql/dockerize/profile*
 /samples/nginx/dockerize/profile*
-/vm2container/
