@@ -3,7 +3,7 @@
 //	- VM: Ubuntu 24.04 server (4 CPU cores, 8GB RAM, 50GB disk)
 //  - Tools: Docker, MySQL, NGINX, strace
 
-// TODO: More progress statements (e.g., "Monitoring...")
+// TODO: Advice Report: Limitations & Future Work?
 
 // --- BACKLOG ---
 
@@ -49,11 +49,10 @@ Usage: vm2container <command> [flags]
 Commands:
   profile     Analyze Unix processes to collect runtime application dependencies.
               Accepts comma-separated process IDs (PIDs). The last PID is treated
-              as the main application process. Example: profile 1234,5678
+              as the main application process.
 
   dockerize   Generate container artifacts for the profiled application.
               Requires the main application PID of the profiled processes.
-              Example: dockerize 5678
 
 Flags:
   -trace-wait <seconds>    (profile only) Duration to wait while capturing

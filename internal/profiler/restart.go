@@ -19,7 +19,7 @@ func RestartProcess(processInfo *ProcessInfo, sleepDuration time.Duration) {
 
 // terminateProcess stops the process with the given PID
 func terminateProcess(processID int) {
-	log.Info(fmt.Sprintf("Terminating process with PID %d", processID))
+	log.Info(fmt.Sprintf("Terminating process with PID %d...", processID))
 	err := exec.Command("sudo", "kill", strconv.Itoa(processID)).Run()
 	if err != nil {
 		log.Error("Failed to terminate process", "error", err)
@@ -42,11 +42,12 @@ func startProcessWithStrace(info *ProcessInfo, sleepDuration time.Duration) {
 	command.Stderr = &stderrBuffer
 
 	// Start the process with strace
-	log.Info(fmt.Sprintf("Starting process with strace: %s", info.ReconstructedCommand))
+	log.Info(fmt.Sprintf("Starting process with strace: %s...", info.ReconstructedCommand))
 	err := command.Start()
 	if err != nil {
 		log.Error("Failed to start process with strace", "stderr", stderrBuffer.String(), "error", err)
 	}
+	log.Info("Monitoring process with strace...")
 	// Sleep to allow the process to start
 	time.Sleep(1 * time.Second)
 
@@ -61,6 +62,7 @@ func startProcessWithStrace(info *ProcessInfo, sleepDuration time.Duration) {
 	if err != nil {
 		log.Error("Failed to kill strace process", "error", err)
 	}
+	log.Info("Tracing complete.")
 }
 
 // prepareStraceCommand constructs the strace command to execute

@@ -50,15 +50,18 @@ func parseDockerizeArguments(pid string) DockerizeOptions {
 // executeDockerization executes the Dockerization process
 func executeDockerization(options DockerizeOptions) {
 	// 1. Load process information
+	log.Info("Loading static process information...")
 	processInfo := profiler.LoadFromYAML(options.ProcessInfoFile)
 
 	// 2. Load file paths from trace log
+	log.Info("Loading runtime data from trace log...")
 	filePaths, err := dockerizer.LoadFilePaths(options.TraceLogFile)
 	if err != nil {
 		log.Fatalf("Failed to load file paths from trace log: %v", err)
 	}
 
 	// 3. Prepare the profile directory
+	log.Info("Copying files to minimal profile filesystem...")
 	if err := os.RemoveAll(options.ProfileDirectory); err != nil {
 		log.Fatalf("Failed to clean up profile directory: %v", err)
 	}
@@ -67,14 +70,16 @@ func executeDockerization(options DockerizeOptions) {
 	}
 
 	// 4. Create a tar archive of the profile directory
+	log.Info("Creating tar archive of profile directory...")
 	if err := dockerizer.CreateTarArchive(options.TarArchivePath, options.ProfileDirectory); err != nil {
 		log.Fatalf("Failed to create tar archive: %v", err)
 	}
 
 	// 5. Generate the Dockerfile
+	log.Info("Generating Dockerfile...")
 	if err := dockerizer.GenerateDockerfile(processInfo, options.DockerfilePath, filepath.Base(options.TarArchivePath), filepath.Base(options.ProfileDirectory)); err != nil {
 		log.Fatalf("Failed to generate Dockerfile: %v", err)
 	}
 
-	log.Printf("Dockerization process completed successfully.")
+	log.Info("Dockerization complete.")
 }

@@ -29,7 +29,9 @@ func RunProfile(arguments []string) {
 	}
 
 	// Merge filtered logs from all processes
+	log.Info("Merging filtered logs...")
 	util.MergeFilteredLogs(options.ProcessIDs)
+	log.Info("Data collection complete.")
 }
 
 // parseProfileArguments parses command line arguments for the profile command
@@ -77,17 +79,21 @@ func getProcessIDs(arguments []string) []int {
 // profileProcess profiles a single process by ID
 func profileProcess(processID int, traceWaitDuration time.Duration) {
 	// 1. Retrieve process information
+	log.Info("Collecting static process information...")
 	processInfo := profiler.GetProcessInfo(processID)
 
 	// 2. Log debug information
 	util.LogProcessDetails(processInfo)
 
 	// 3. Save process information to a YAML file
+	log.Info("Saving process metadata as YAML...")
 	processInfo.SaveAsYAML()
+	log.Info("Static analysis complete.")
 
 	// 4. Restart the process with strace monitoring
 	profiler.RestartProcess(processInfo, traceWaitDuration)
 
 	// 5. Filter the strace log file to remove duplicates and invalid paths
+	log.Info("Filtering raw strace log...")
 	profiler.FilterStraceLog(processInfo)
 }
