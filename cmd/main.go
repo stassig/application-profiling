@@ -1,13 +1,6 @@
-// TODO: Readme: instructions for running the application
-// TODO: Instructions for test environment setup
-//	- VM: Ubuntu 24.04 server (4 CPU cores, 8GB RAM, 50GB disk)
-//  - Tools: Docker, MySQL, NGINX, strace
-
-// TODO: Advice Report: Limitations & Future Work?
-
 // --- BACKLOG ---
 
-// TO DO: Clean up codebase: interfacing?
+// TODO: Clean up codebase: interfacing?
 
 package main
 
