@@ -3,7 +3,6 @@
 ### Prerequisites
 
 Before proceeding with installation, ensure the following:
-Ensure your system meets the following requirements:
 
 - **OS**: Ubuntu 24.04 server (or compatible)
 - **Resources**: 2 CPU cores, 4GB RAM, 20GB disk space
@@ -57,7 +56,7 @@ sudo systemctl status nginx # Verify installation
 Clone the repository and build the CLI tool:
 
 ```bash
-git clone git@github.com:stassig/application-profiling.git
+git clone https://github.com/stassig/application-profiling.git
 cd application-profiling
 go build -o vm2container cmd/main.go
 ./vm2container --help  # Verify the build
