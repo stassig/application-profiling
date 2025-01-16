@@ -1,14 +1,15 @@
-# Workflow Overview
+# System Workflow
 
-<div style="text-align: center;">
-    <img src="./component-diagram.png" alt="Workflow Overview" width="500">
-</div>
+<img src="./component-diagram.png" alt="Workflow Overview" width="500">
 
 ---
 
-The **vm2container** tool consists of two primary modules:  
-🔹 **Profiler** – Captures and analyzes an application’s runtime behavior.  
-🔹 **Dockerizer** – Uses profiling data to generate a containerized version of the application.
+**vm2container** is a Golang CLI tool for replatforming applications from Ubuntu-based enviroments to Docker containers. It has two functions:
+
+🔹 `profile` – Captures and analyzes an application’s runtime behavior.  
+🔹 `dockerize` – Uses profiling data to generate a containerized version of the application.
+
+The only requirement for migration is the **main process ID (PID) of the target application**.
 
 The details of each module are explained below.
 

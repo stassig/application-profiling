@@ -4,14 +4,14 @@ This command-line tool automates the migration of applications running on Ubuntu
 
 ## Documentation
 
-- [Workflow Overview](./docs/workflow.md)
+- [System Workflow](./docs/workflow.md)
 - [Installation Guide](./docs/installation.md)
 - [NGINX Migration Guide](./docs/nginx-guide.md)
 - [MySQL Migration Guide](./docs/mysql-guide.md)
 
 ## Quick Start
 
-To get started, follow the [Installation Guide](./docs/installation.md) to set up the tool and dependencies. For a detailed explanation of the profiling process, refer to the [Workflow Overview](./docs/workflow.md).
+To get started, follow the [Installation Guide](./docs/installation.md) to set up the tool and dependencies. For a detailed explanation of the profiling process, refer to the [System Workflow](./docs/workflow.md).
 
 For practical use cases, see:
 
