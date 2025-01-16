@@ -22,7 +22,7 @@ pgrep -o -x nginx
 Run the profiling command to collect runtime dependencies. Replace <PID> with the PID obtained from step 1:
 
 ```bash
-./vm2container profile <PID>
+sudo ./vm2container profile <PID>
 ```
 
 This will output the collected data to:
@@ -38,7 +38,7 @@ This will output the collected data to:
 Generate a Docker configuration and minimal filesystem for the application:
 
 ```bash
-./vm2container dockerize <PID>
+sudo ./vm2container dockerize <PID>
 ```
 
 The Docker configuration will be saved to:
@@ -65,7 +65,7 @@ kill <PID>           # Stop the NGINX process
 Build a Docker container image using the generated Dockerfile and profile:
 
 ```bash
-docker build -t nginx-server ./output/<PID>/dockerize
+sudo docker build -t nginx-server ./output/<PID>/dockerize
 ```
 
 ---
@@ -75,7 +75,7 @@ docker build -t nginx-server ./output/<PID>/dockerize
 Start the container and bind it to the host network:
 
 ```bash
-docker run -d --network=host nginx-server
+sudo docker run -d --network=host nginx-server
 ```
 
 ---

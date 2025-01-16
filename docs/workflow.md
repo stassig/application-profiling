@@ -1,19 +1,100 @@
 # Workflow Overview
 
-## Phase 1: Profile
+![Workflow Overview](./component-diagram.png)
 
-Analyze the underlying Unix processes of an application to collect its runtime dependencies required for containerization. ([profile.go](../cmd/commands/profile.go))
+---
 
-1. **Collect Metadata**: Extract process information from `/proc`, including environment variables and ports, and save it to a YAML file. ([info.go](../internal/profiler/info.go))
-2. **Restart with Tracing**: Restart the application process with `strace` to monitor runtime behavior . ([restart.go](../internal/profiler/restart.go))
-3. **Capture Dependencies**: Log file-related system calls to identify transient dependencies.
-4. **Filter Logs**: Clean up trace logs to retain only relevant file paths. ([filter.go](../internal/profiler/filter.go))
+The **vm2container** tool consists of two primary modules:  
+🔹 **Profiler** – Captures and analyzes an application’s runtime behavior.  
+🔹 **Dockerizer** – Uses profiling data to generate a containerized version of the application.
 
-## Phase 2: Dockerize
+The details of each module are explained below.
 
-Generate a minimal Docker container configuration from the profiled dependencies. ([dockerize.go](../cmd/commands/dockerize.go))
+---
 
-1. **Load Data**: Import process metadata and file paths from the profiling phase.
-2. **Build Filesystem**: Copy identified files and directories into a minimal profile filesystem. ([filesystem.go](../internal/dockerizer/filesystem.go))
-3. **Archive and Package**: Create a compressed tarball of the profile filesystem.
-4. **Generate Dockerfile**: Create a tailored Dockerfile based on the collected dependencies and runtime configuration. ([generate.go](../internal/dockerizer/generate.go))
+## **1️⃣ Profiler Module**
+
+The **Profiler** identifies the dependencies needed to recreate an application inside a container.
+
+### **🔍 Static Analyzer**
+
+- Examines the `/proc` filesystem to extract metadata about the running process.
+- Collects:
+  - Child PIDs, user, and group.
+  - Executable path and working directory.
+  - Open network ports and active Unix sockets.
+  - Environment variables.
+  - CPU, Memory, and Disk usage.
+- Provides a baseline understanding of the application before runtime tracing.
+- **Related Files:** [info.go](../internal/profiler/info.go), [resources.go](../internal/profiler/resources.go), [network.go](../internal/profiler/network.go)
+
+### **📡 Runtime Tracer**
+
+- Restarts the application with `strace` attached.
+- **Captures system calls** about file-related events.
+- Helps identify dynamic dependencies not visible from static analysis.
+- **Related Files:** [restart.go](../internal/profiler/restart.go)
+
+### **🗂️ Data Filter**
+
+- Processes `strace` logs to extract only **relevant file paths**.
+- Filters out system directories and noise.
+- Ensures only necessary dependencies are passed to the **Dockerizer**.
+- **Related Files:** [filter.go](../internal/profiler/filter.go), [save.go](../internal/profiler/save.go)
+
+### **📝 Profiler Output**
+
+The **Profiler** produces:
+
+1. **Process Profile** – YAML metadata describing the application’s execution environment.
+2. **Accessed File Paths** – A filtered list of required dependencies.
+
+---
+
+## **2️⃣ Dockerizer Module**
+
+The **Dockerizer** takes profiling data and generates a minimal container environment.
+
+### **📦 Filesystem Builder**
+
+- Copies all required files and directories identified by the **Profiler**.
+- Creates a minimal filesystem layout inside a working directory.
+- **Related Files:** [filesystem.go](../internal/dockerizer/filesystem.go)
+
+### **🗜️ Tar Archiver**
+
+- Compresses the minimal filesystem into a `.tar.gz` archive.
+- Prepares the filesystem for efficient copying inside the Docker container.
+- **Related Files:** [filesystem.go](../internal/dockerizer/filesystem.go)
+
+### **📜 Dockerfile Generator**
+
+- Creates a **custom Dockerfile** using process metadata:
+  - Sets the base image (based on OS detection).
+  - Copies the tar archive and extracts it.
+  - Configures environment variables.
+  - Defines exposed ports and the startup command.
+  - Sets the working directory.
+  - Configures user permissions for execution.
+- **Related Files:** [generate.go](../internal/dockerizer/generate.go)
+
+### **📦 Dockerizer Output**
+
+The **Dockerizer** produces:
+
+1. **Minimal Filesystem** – A compressed archive of the application’s required files.
+2. **Dockerfile** – A tailored configuration to run the application inside a container.
+
+---
+
+## **Summary**
+
+```plaintext
+User Input (CLI) → Profiler → Dockerizer → Container Artifacts
+```
+
+1. **Profiler** analyzes an application’s execution environment, capturing both static metadata (`/proc`) and runtime behavior (`strace`).
+2. **Dockerizer** packages these dependencies into a container-ready format.
+3. **Outputs:** A **Dockerfile** and a **compressed filesystem** to recreate the application.
+
+---
