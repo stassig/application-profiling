@@ -1,6 +1,8 @@
 # Workflow Overview
 
-![Workflow Overview](./component-diagram.png)
+<div style="text-align: center;">
+    <img src="./component-diagram.png" alt="Workflow Overview" width="500">
+</div>
 
 ---
 
