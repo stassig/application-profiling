@@ -1,9 +1,9 @@
 # NGINX Migration Guide
 
-> **Note**: This guide assumes the following:
+> **Prerequisites**:
 >
 > - You have elevated privileges (sudo/root access) to run necessary commands.
-> - NGINX is installed and running as per the [Installation Guide](installation.md).
+> - **NGINX and vm2container are installed** as per the [Installation Guide](installation.md).
 
 Follow these steps to profile a web server and generate a Docker container.
 
@@ -22,7 +22,7 @@ pgrep -o -x nginx
 Run the profiling command to collect runtime dependencies. Replace <PID> with the PID obtained from step 1:
 
 ```bash
-sudo ./vm2container profile <PID>
+sudo vm2container profile <PID>
 ```
 
 This will output the collected data to:
@@ -38,7 +38,7 @@ This will output the collected data to:
 Generate a Docker configuration and minimal filesystem for the application:
 
 ```bash
-sudo ./vm2container dockerize <PID>
+sudo vm2container dockerize <PID>
 ```
 
 The Docker configuration will be saved to:

@@ -1,9 +1,9 @@
 # MySQL Migration Guide
 
-> **Note**: This guide assumes the following:
+> **Prerequisites**:
 >
 > - You have elevated privileges (sudo/root access) to run necessary commands.
-> - MySQL is installed and running as per the [Installation Guide](installation.md).
+> - **MySQL and vm2container are installed** as per the [Installation Guide](installation.md).
 
 Follow these steps to profile a MySQL server and generate a Docker container.
 
@@ -34,7 +34,7 @@ To collect all relevant dependencies, retrieve the PIDs of the MySQL console ins
 Run the profiling command to collect runtime dependencies. Replace `<console-pid>` and `<mysql-pid>` with the PIDs obtained in step 1:
 
 ```bash
-sudo ./vm2container profile <console-pid>,<mysql-pid>
+sudo vm2container profile <console-pid>,<mysql-pid>
 ```
 
 This will output the collected data to:
@@ -50,7 +50,7 @@ This will output the collected data to:
 Generate a Docker configuration and minimal filesystem:
 
 ```bash
-sudo ./vm2container dockerize <mysql-pid>
+sudo vm2container dockerize <mysql-pid>
 ```
 
 The Docker configuration will be saved to:

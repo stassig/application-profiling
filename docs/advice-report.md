@@ -12,7 +12,7 @@ Restarting processes is necessary to capture startup dependencies (e.g., shared 
 
 The current approach uses `strace` to track all file-related syscalls, but this results in excessive noise, including system-wide paths (`/proc`, `/sys`, `/dev`) that are not relevant to migration. Instead of hardcoding filters, it would be better to refine `strace` parameters to capture only key syscalls such as `open`, `execve`, and `readlink`. This would reduce noise and make the approach more adaptable across different Linux environments.
 
-## 3. Independent Processes
+## 3. Standalone Processes
 
 Some applications, like MySQL, launch separate processes that don’t follow a parent-child hierarchy, making them difficult to track using `strace` with `-f` (follow child processes). A better alternative could be `bpftrace`, which allows tracking all instances of a target application by filtering based on process name (`comm == "mysql"`). However, identifying the representative application name for filtering might not always be straightforward. One option could be to use the executable file name from `/proc/<pid>/exe` as input to ensure that all relevant processes are captured.
 

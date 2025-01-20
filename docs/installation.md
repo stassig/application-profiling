@@ -58,6 +58,7 @@ Clone the repository and build the CLI tool:
 ```bash
 git clone https://github.com/stassig/application-profiling.git
 cd application-profiling
-go build -o vm2container cmd/main.go
-./vm2container --help  # Verify the build
+go build -o /usr/local/bin/vm2container cmd/main.go
+chmod +x /usr/local/bin/vm2container
+vm2container --help  # Verify the build
 ```
