@@ -45,7 +45,7 @@ The **Profiler** identifies the dependencies needed to recreate an application i
 - Ensures only necessary dependencies are passed to the **Dockerizer**.
 - **Related Files:** [filter.go](../internal/profiler/filter.go), [save.go](../internal/profiler/save.go)
 
-### **📝 Profiler Output**
+### **📄 Output**
 
 The **Profiler** produces:
 
@@ -68,7 +68,7 @@ The **Dockerizer** takes profiling data and generates a minimal container enviro
 
 - Compresses the minimal filesystem into a `.tar.gz` archive.
 - Prepares the filesystem for efficient copying inside the Docker container.
-- **Related Files:** [filesystem.go](../internal/dockerizer/filesystem.go)
+- **Related Files:** [archiver.go](../internal/dockerizer/archiver.go)
 
 ### **📜 Dockerfile Generator**
 
@@ -81,7 +81,7 @@ The **Dockerizer** takes profiling data and generates a minimal container enviro
   - Configures user permissions for execution.
 - **Related Files:** [generate.go](../internal/dockerizer/generate.go)
 
-### **📦 Dockerizer Output**
+### **📄 Output**
 
 The **Dockerizer** produces:
 
