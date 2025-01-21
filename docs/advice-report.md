@@ -34,7 +34,7 @@ Currently, resource usage is captured as a single snapshot, which doesn’t alwa
 
 ## 8. Non-Deterministic Apps
 
-Non-deterministic applications load dependencies only when certain conditions are met. For example, NGINX does not always load HTML files unless specific HTTP requests trigger them, meaning some dependencies might be missed during profiling. In contrast, deterministic applications like databases tend to be more predictable, making them less prone to this issue. A potential solution could be to use machine learning techniques to infer missing dependencies based on historical profiling data.
+Non-deterministic applications load dependencies only when certain conditions are met. For example, NGINX does not always load HTML files unless specific HTTP requests trigger them, meaning some dependencies might be missed during profiling. In contrast, deterministic applications like databases tend to be more predictable, making them less prone to this issue. A potential solution could be to use machine learning techniques to infer missing dependencies based on historical profiling data. Another approach could be to analyze errors from failed container runs, using them to iteratively detect and include missing dependencies until the container starts successfully.
 
 ## 9. Security
 

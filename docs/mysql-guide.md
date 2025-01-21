@@ -5,6 +5,8 @@
 > - You have elevated privileges (sudo/root access) to run necessary commands.
 > - **MySQL and vm2container are installed** as per the [Installation Guide](installation.md).
 
+📌 **Demo:** [MySQL Migration](https://drive.google.com/file/d/1RttL7_uTeGMbr2d-uKmTwogzitQW8PvT/view?usp=sharing)
+
 Follow these steps to profile a MySQL server and generate a Docker container.
 
 ---
